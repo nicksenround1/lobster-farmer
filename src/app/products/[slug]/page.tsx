@@ -120,7 +120,7 @@ export default function ProductDetailPage() {
 
         {/* CTA */}
         <div className="text-center mb-16 animate-fade-in animate-delay-400">
-          {product.stripeLink !== undefined && product.stripeLink !== "" ? (
+          {product.stripeLink && product.stripeLink !== "" ? (
             <a
               href={product.stripeLink}
               target="_blank"
@@ -134,9 +134,9 @@ export default function ProductDetailPage() {
               href="https://t.me/+2p-LBUUrJ1BjMjNl"
               target="_blank"
               rel="noopener noreferrer"
-              className="cta-button px-10 py-4 rounded-full text-lg font-bold inline-block"
+              className="glass-pill px-10 py-4 rounded-full text-lg font-bold inline-block text-white/70 hover:text-white"
             >
-              {t.products.buyNow} ${product.price} →
+              {t.products.comingSoon} — {t.products.contactBuy} →
             </a>
           )}
         </div>

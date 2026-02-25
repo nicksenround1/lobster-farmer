@@ -42,6 +42,7 @@ export const products: Product[] = [
       zh: ["10 个配置文件", "2 个 Skills", "Cron 模板"],
       en: ["10 config files", "2 Skills", "Cron templates"],
     },
+    stripeLink: "https://buy.stripe.com/28EaEY1LI7jM28w1lE2VG03",
     name: { zh: "入门包", en: "Starter Pack" },
     desc: {
       zh: "OpenClaw 零基础入门套餐，$1 起步，快速搭建你的第一个 AI Agent。",
