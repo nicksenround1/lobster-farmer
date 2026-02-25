@@ -1,26 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { useLocale } from "@/context/LocaleContext";
-import { products, Product } from "@/data/products";
-
-type Filter = "all" | Product["category"];
+import { products } from "@/data/products";
 
 export default function ProductsPage() {
   const { locale, t } = useLocale();
-  const [filter, setFilter] = useState<Filter>("all");
-
-  const filters: { key: Filter; label: string }[] = [
-    { key: "all", label: t.products.filterAll },
-    { key: "starter", label: t.products.filterStarter },
-    { key: "core", label: t.products.filterCore },
-    { key: "premium", label: t.products.filterPremium },
-    { key: "bundle", label: t.products.filterBundle },
-  ];
-
-  const filtered =
-    filter === "all" ? products : products.filter((p) => p.category === filter);
 
   return (
     <main className="min-h-screen bg-black relative pt-28 pb-20 px-4">
@@ -32,9 +17,9 @@ export default function ProductsPage() {
       {/* Background text */}
       <div className="bg-text top-24 right-8 text-right">Products</div>
 
-      <div className="max-w-6xl mx-auto relative z-10">
+      <div className="max-w-5xl mx-auto relative z-10">
         {/* Header */}
-        <div className="text-center mb-12 animate-fade-in">
+        <div className="text-center mb-16 animate-fade-in">
           <Link
             href="/"
             className="inline-flex items-center gap-2 text-white/40 hover:text-white/70 transition-colors text-sm mb-6"
@@ -50,62 +35,96 @@ export default function ProductsPage() {
           </p>
         </div>
 
-        {/* Filter tabs */}
-        <div className="flex flex-wrap justify-center gap-2 mb-12 animate-fade-in animate-delay-100">
-          {filters.map((f) => (
-            <button
-              key={f.key}
-              onClick={() => setFilter(f.key)}
-              className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
-                filter === f.key
-                  ? "cta-button"
-                  : "glass-pill text-white/60 hover:text-white"
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
+        {/* Product cards — 3 products, no filter needed */}
+        <div className="flex flex-col gap-8">
+          {products.map((product, i) => {
+            const savings = product.originalPrice - product.price;
+            const isStarter = product.category === "starter";
+            const isBundle = product.category === "bundle";
 
-        {/* Product grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {filtered.map((product, i) => (
-            <Link
-              key={product.slug}
-              href={`/products/${product.slug}`}
-              className={`glass-card rounded-3xl p-8 group animate-fade-in block`}
-              style={{ animationDelay: `${(i + 1) * 100}ms` }}
-            >
-              <div className="flex items-start justify-between mb-6">
-                <div className="text-4xl">{product.icon}</div>
-                <span className="glass-pill px-3 py-1 rounded-full text-xs font-medium text-white/60">
-                  {product.tag[locale]}
-                </span>
-              </div>
+            return (
+              <Link
+                key={product.slug}
+                href={`/products/${product.slug}`}
+                className="glass-card rounded-3xl p-8 lg:p-10 group animate-fade-in block relative overflow-hidden"
+                style={{ animationDelay: `${(i + 1) * 150}ms` }}
+              >
+                {/* Starter Pack special highlight */}
+                {isStarter && (
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#E74C3C] via-[#ff6b4a] to-[#E74C3C]" />
+                )}
+                {/* Bundle highlight */}
+                {isBundle && (
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#9b59b6] via-[#8e44ad] to-[#9b59b6]" />
+                )}
 
-              <h3 className="text-xl font-bold text-white mb-3 group-hover:text-[#E74C3C] transition-colors">
-                {product.name[locale]}
-              </h3>
+                <div className="flex flex-col lg:flex-row lg:items-start gap-6">
+                  {/* Left: Icon */}
+                  <div className="text-5xl lg:text-6xl shrink-0">
+                    {product.icon}
+                  </div>
 
-              <p className="text-white/50 mb-6 leading-relaxed text-sm">
-                {product.desc[locale]}
-              </p>
+                  {/* Middle: Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 mb-3 flex-wrap">
+                      <h3 className="text-xl lg:text-2xl font-bold text-white group-hover:text-[#E74C3C] transition-colors">
+                        {product.name[locale]}
+                      </h3>
+                      <span className="glass-pill px-3 py-1 rounded-full text-xs font-medium text-white/60">
+                        {product.tag[locale]}
+                      </span>
+                      {isStarter && (
+                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-[#E74C3C]/20 text-[#E74C3C] border border-[#E74C3C]/30 animate-pulse">
+                          🔥 $1
+                        </span>
+                      )}
+                      {isBundle && (
+                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-green-500/20 text-green-400 border border-green-500/30">
+                          {t.products.save} ${savings}
+                        </span>
+                      )}
+                    </div>
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-bold text-[#E74C3C] stat-glow">
-                    ${product.price}
-                  </span>
-                  <span className="text-sm text-white/30 line-through">
-                    ${product.originalPrice}
-                  </span>
+                    <p className="text-white/50 mb-5 leading-relaxed text-sm lg:text-base max-w-2xl">
+                      {product.desc[locale]}
+                    </p>
+
+                    {/* Quick feature highlights */}
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {product.features[locale].slice(0, 4).map((feat, fi) => (
+                        <span
+                          key={fi}
+                          className="text-xs text-white/40 bg-white/5 px-3 py-1.5 rounded-full"
+                        >
+                          {feat.replace(/🎁\s*/, "").split("—")[0].split("(")[0].trim()}
+                        </span>
+                      ))}
+                      {product.features[locale].length > 4 && (
+                        <span className="text-xs text-white/30 px-3 py-1.5">
+                          +{product.features[locale].length - 4} more
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right: Price + CTA */}
+                  <div className="flex lg:flex-col items-center lg:items-end gap-4 shrink-0">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-3xl lg:text-4xl font-bold text-[#E74C3C] stat-glow">
+                        ${product.price}
+                      </span>
+                      <span className="text-sm text-white/30 line-through">
+                        ${product.originalPrice}
+                      </span>
+                    </div>
+                    <span className="glass-pill px-6 py-2.5 rounded-full text-sm font-medium text-white/70 group-hover:text-white group-hover:border-white/30 transition-all whitespace-nowrap">
+                      {t.products.viewDetails} →
+                    </span>
+                  </div>
                 </div>
-                <span className="glass-pill px-4 py-2 rounded-full text-sm font-medium text-white/70 group-hover:text-white group-hover:border-white/30 transition-all">
-                  {t.products.viewDetails} →
-                </span>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
       </div>
     </main>
