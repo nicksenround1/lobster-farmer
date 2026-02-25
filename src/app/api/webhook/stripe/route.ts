@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
+import crypto from "crypto";
 
 function getResend() {
   const key = process.env.RESEND_API_KEY;
@@ -10,28 +11,23 @@ function getResend() {
   return new Resend(key);
 }
 
-// Product info for email content
-const productInfo: Record<string, { name: string; downloadUrl: string; installCmd: string }> = {
-  "prod_U2kCKFHP7zts2r": {
-    name: "Starter Pack",
-    downloadUrl: "https://lobsterfarmer.com/downloads/starter-pack-v1.0.zip",
-    installCmd: "curl -fsSL https://lobsterfarmer.com/install/starter-pack.sh | bash",
-  },
-  "prod_U2hnK4QosbVdpE": {
-    name: "Lobster Persona",
-    downloadUrl: "https://lobsterfarmer.com/downloads/lobster-persona-v1.0.zip",
-    installCmd: "curl -fsSL https://lobsterfarmer.com/install/lobster-persona.sh | bash",
-  },
-  "prod_U2hnhpQ5THu5uh": {
-    name: "Lobster Bundle",
-    downloadUrl: "https://lobsterfarmer.com/downloads/lobster-bundle-v1.0.zip",
-    installCmd: "curl -fsSL https://lobsterfarmer.com/install/lobster-bundle.sh | bash",
-  },
-  "prod_U2hnEpnOlolVU0": {
-    name: "Lobster Bundle",
-    downloadUrl: "https://lobsterfarmer.com/downloads/lobster-bundle-v1.0.zip",
-    installCmd: "curl -fsSL https://lobsterfarmer.com/install/lobster-bundle.sh | bash",
-  },
+const DOWNLOAD_SECRET = process.env.DOWNLOAD_SECRET || "lobster-dl-secret-2026";
+
+function generateDownloadToken(product: string): string {
+  const hour = Math.floor(Date.now() / 3600000);
+  return crypto
+    .createHmac("sha256", DOWNLOAD_SECRET)
+    .update(product + hour)
+    .digest("hex")
+    .substring(0, 16);
+}
+
+// Map Stripe product IDs to our product slugs
+const productMap: Record<string, { name: string; slug: string }> = {
+  "prod_U2kCKFHP7zts2r": { name: "Starter Pack", slug: "starter-pack" },
+  "prod_U2hnK4QosbVdpE": { name: "Lobster Persona", slug: "lobster-persona" },
+  "prod_U2hnhpQ5THu5uh": { name: "Lobster Bundle", slug: "lobster-bundle" },
+  "prod_U2hnEpnOlolVU0": { name: "Lobster Bundle", slug: "lobster-bundle" },
 };
 
 export async function POST(req: NextRequest) {
@@ -39,7 +35,6 @@ export async function POST(req: NextRequest) {
     const body = await req.text();
     const sig = req.headers.get("stripe-signature");
 
-    // Simple signature check - in production use stripe.webhooks.constructEvent
     if (!sig) {
       return NextResponse.json({ error: "No signature" }, { status: 400 });
     }
@@ -55,31 +50,33 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ received: true });
       }
 
-      // Get product info from line items
+      // Match product
       const lineItems = session.line_items?.data || [];
       let productName = "Your Purchase";
-      let downloadUrl = "https://lobsterfarmer.com/checkout/success";
-      let installCmd = "";
+      let productSlug = "starter-pack";
 
-      // Try to match product from metadata or line items
       for (const item of lineItems) {
         const prodId = item.price?.product;
-        if (prodId && productInfo[prodId]) {
-          productName = productInfo[prodId].name;
-          downloadUrl = productInfo[prodId].downloadUrl;
-          installCmd = productInfo[prodId].installCmd;
+        if (prodId && productMap[prodId]) {
+          productName = productMap[prodId].name;
+          productSlug = productMap[prodId].slug;
           break;
         }
       }
 
-      // Send delivery email
+      // Generate secure download token (valid 72 hours)
+      const token = generateDownloadToken(productSlug);
+      const downloadUrl = `https://lobsterfarmer.com/api/download?product=${productSlug}&token=${token}`;
+      const successUrl = `https://lobsterfarmer.com/checkout/success?product=${productSlug}&token=${token}`;
+
+      // Send delivery email with secure download link
       const resend = getResend();
       if (resend) {
         await resend.emails.send({
-        from: "养虾户 Lobster Farmer <noreply@lobsterfarmer.com>",
-        to: [customerEmail],
-        subject: `🦞 Your ${productName} is ready!`,
-        html: `
+          from: "养虾户 Lobster Farmer <noreply@lobsterfarmer.com>",
+          to: [customerEmail],
+          subject: `🦞 Your ${productName} is ready!`,
+          html: `
 <!DOCTYPE html>
 <html>
 <head>
@@ -105,21 +102,14 @@ export async function POST(req: NextRequest) {
 
   <div class="card">
     <h2>📦 Step 1: Download</h2>
-    <p>Click below to download your product files:</p>
+    <p>Click below to download your product files (link valid for 72 hours):</p>
     <a href="${downloadUrl}" class="btn">Download ${productName}</a>
+    <p style="font-size: 12px; color: #666; margin-top: 12px;">Link expired? Contact support@lobsterfarmer.com for a new one.</p>
   </div>
 
-  ${installCmd ? `
   <div class="card">
-    <h2>⚡ Step 2: One-Click Install</h2>
-    <p>Or paste this command into your terminal:</p>
-    <div class="code">${installCmd}</div>
-  </div>
-  ` : ""}
-
-  <div class="card">
-    <h2>🎯 Step 3: Customize</h2>
-    <p>Edit these files in your OpenClaw workspace:</p>
+    <h2>🎯 Step 2: Install & Customize</h2>
+    <p>Extract the zip to your OpenClaw workspace, then edit:</p>
     <p>→ <code>USER.md</code> — Add your info<br>→ <code>SOUL.md</code> — Tweak Agent personality<br>→ <code>HEARTBEAT.md</code> — Set up auto-checks</p>
   </div>
 
@@ -137,10 +127,10 @@ export async function POST(req: NextRequest) {
 </div>
 </body>
 </html>
-        `,
-      });
+          `,
+        });
 
-        console.log(`Delivery email sent to ${customerEmail} for ${productName}`);
+        console.log(`Delivery email sent to ${customerEmail} for ${productName} (token: ${token})`);
       } else {
         console.log(`Resend not configured, skipping email for ${customerEmail}`);
       }
