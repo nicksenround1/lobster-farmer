@@ -1,17 +1,24 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useLocale } from "@/context/LocaleContext";
 
 interface Purchase {
+  id: string;
   product: string;
   slug: string;
   date: string;
   amount: string;
+  currency: string;
   downloadUrl: string;
   installCmd: string;
+}
+
+interface DashboardData {
+  email: string;
+  purchases: Purchase[];
 }
 
 type Tab = "purchases" | "settings";
@@ -19,141 +26,126 @@ type Tab = "purchases" | "settings";
 function DashboardContent() {
   const { locale } = useLocale();
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>("purchases");
-  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
-      const meRes = await fetch("/api/auth/me");
-      if (!meRes.ok) {
+      const res = await fetch("/api/auth/purchases");
+      if (res.status === 401) {
         router.push("/login");
         return;
       }
-      const meData = await meRes.json();
-      setEmail(meData.email);
-
-      const dashRes = await fetch("/api/dashboard");
-      if (dashRes.ok) {
-        const dashData = await dashRes.json();
-        setPurchases(dashData.purchases || []);
+      if (res.ok) {
+        const json = await res.json();
+        setData(json);
       }
     } catch {
-      router.push("/login");
+      // ignore
     } finally {
       setLoading(false);
     }
   }, [router]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
   };
 
-  const copyCmd = (idx: number, cmd: string) => {
-    navigator.clipboard.writeText(cmd);
-    setCopiedIdx(idx);
-    setTimeout(() => setCopiedIdx(null), 2000);
-  };
-
-  const productIcons: Record<string, string> = {
-    "starter-pack": "📦",
-    "lobster-persona": "🦞",
-    "lobster-bundle": "🎁",
-  };
-
-  const productVersions: Record<string, string> = {
-    "starter-pack": "v1.0",
-    "lobster-persona": "v1.0",
-    "lobster-bundle": "v1.0",
+  const handleCopy = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(id);
+    setTimeout(() => setCopied(null), 2000);
   };
 
   if (loading) {
     return (
       <main className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-white/40 text-sm">Loading...</div>
+        <div className="text-white/40 animate-pulse">Loading...</div>
       </main>
     );
   }
 
-  const initials = email ? email.substring(0, 2).toUpperCase() : "??";
+  if (!data) {
+    return null;
+  }
+
+  const initials = data.email.substring(0, 2).toUpperCase();
+
+  const tabs: { key: Tab; label: string }[] = [
+    { key: "purchases", label: locale === "zh" ? "我的购买" : "My Purchases" },
+    { key: "settings", label: locale === "zh" ? "设置" : "Settings" },
+  ];
 
   return (
     <main className="min-h-screen bg-black relative pt-28 pb-20 px-4">
-      <div className="glow-orb glow-orb-purple w-[400px] h-[400px] top-20 right-1/4 opacity-10" />
+      <div className="glow-orb glow-orb-red w-[500px] h-[500px] top-20 right-1/4 opacity-10" />
+      <div className="glow-orb glow-orb-purple w-[350px] h-[350px] bottom-20 left-1/4 opacity-10" />
 
       <div className="max-w-4xl mx-auto relative z-10">
         {/* Header */}
-        <div className="glass-card rounded-3xl p-8 mb-8 animate-fade-in">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#E74C3C] to-[#C0392B] flex items-center justify-center text-white font-bold text-sm">
-                {initials}
-              </div>
-              <div>
-                <p className="text-white/40 text-xs uppercase tracking-wider">
-                  {locale === "zh" ? "账户面板" : "Account Dashboard"}
-                </p>
-                <h1 className="text-xl font-bold text-white">
-                  {locale === "zh" ? `欢迎回来` : `Welcome back`}
-                </h1>
-                <p className="text-white/40 text-sm">{email}</p>
-              </div>
+        <div className="flex items-center justify-between mb-10 animate-fade-in">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#E74C3C] to-[#8b5cf6] flex items-center justify-center text-white font-bold text-sm">
+              {initials}
             </div>
-            <div className="flex gap-3">
-              <Link
-                href="/products"
-                className="glass-pill px-5 py-2 rounded-full text-sm text-white/60 hover:text-white"
-              >
-                {locale === "zh" ? "浏览产品" : "Browse Products"}
-              </Link>
-              <button
-                onClick={handleLogout}
-                className="glass-pill px-5 py-2 rounded-full text-sm text-white/60 hover:text-white"
-              >
-                {locale === "zh" ? "退出" : "Sign Out"}
-              </button>
+            <div>
+              <p className="text-white/40 text-xs uppercase tracking-wider">
+                {locale === "zh" ? "账户面板" : "Account Dashboard"}
+              </p>
+              <h1 className="text-xl font-bold text-white">
+                {locale === "zh" ? `欢迎回来` : `Welcome back`}
+              </h1>
+              <p className="text-white/40 text-sm">{data.email}</p>
             </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/products"
+              className="glass-pill px-4 py-2 rounded-full text-sm text-white/60 hover:text-white"
+            >
+              {locale === "zh" ? "浏览产品" : "Browse Products"}
+            </Link>
+            <button
+              onClick={handleLogout}
+              className="glass-pill px-4 py-2 rounded-full text-sm text-white/60 hover:text-white"
+            >
+              {locale === "zh" ? "退出" : "Sign Out"}
+            </button>
           </div>
         </div>
 
-        {/* Body with sidebar */}
-        <div className="flex flex-col md:flex-row gap-6">
-          {/* Sidebar */}
-          <div className="md:w-48 shrink-0">
-            <div className="flex md:flex-col gap-2">
-              {(
-                [
-                  { key: "purchases" as Tab, label: locale === "zh" ? "我的购买" : "My Purchases", icon: "📦" },
-                  { key: "settings" as Tab, label: locale === "zh" ? "设置" : "Settings", icon: "⚙️" },
-                ] as const
-              ).map((tab) => (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key)}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all text-left w-full ${
-                    activeTab === tab.key
-                      ? "bg-[#E74C3C]/20 text-[#E74C3C] border border-[#E74C3C]/30"
-                      : "text-white/40 hover:text-white/70 hover:bg-white/5"
-                  }`}
-                >
-                  <span>{tab.icon}</span>
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+        {/* Body */}
+        <div className="flex flex-col md:flex-row gap-6 animate-fade-in animate-delay-100">
+          {/* Sidebar tabs */}
+          <div className="md:w-48 flex md:flex-col gap-2">
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`px-4 py-2.5 rounded-xl text-sm font-medium text-left transition-all ${
+                  activeTab === tab.key
+                    ? "bg-[#E74C3C]/20 text-[#E74C3C] border border-[#E74C3C]/30"
+                    : "text-white/50 hover:text-white/80 hover:bg-white/5"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
 
           {/* Main content */}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1">
             {activeTab === "purchases" && (
-              <div className="space-y-4 animate-fade-in">
-                <div>
-                  <h2 className="text-xl font-bold text-white mb-1">
+              <div>
+                <div className="mb-6">
+                  <h2 className="text-2xl font-bold text-white mb-1">
                     {locale === "zh" ? "我的购买" : "My Purchases"}
                   </h2>
                   <p className="text-white/40 text-sm">
@@ -164,130 +156,117 @@ function DashboardContent() {
                 </div>
 
                 {/* Install hint */}
-                <div className="glass-card rounded-xl p-4 border-l-2 border-cyan-500/50">
+                <div className="glass-card rounded-xl p-4 mb-6 border-l-2 border-cyan-500/50">
                   <p className="text-white/50 text-sm">
                     {locale === "zh"
-                      ? "💡 你可以直接下载文件，或复制安装命令让 OpenClaw 自动安装。"
-                      : "💡 Download files directly, or copy the install command for your OpenClaw assistant."}
+                      ? "💡 你可以直接下载文件到 OpenClaw workspace，或使用下方的安装命令。"
+                      : "💡 Download files to your OpenClaw workspace, or use the install command below."}
                   </p>
                 </div>
 
-                {purchases.length === 0 ? (
-                  <div className="glass-card rounded-2xl p-12 text-center">
-                    <div className="text-4xl mb-4">🛒</div>
-                    <p className="text-white/40 mb-4">
+                {data.purchases.length === 0 ? (
+                  <div className="glass-card rounded-2xl p-10 text-center">
+                    <div className="text-4xl mb-4">📦</div>
+                    <p className="text-white/50 mb-4">
                       {locale === "zh" ? "还没有购买记录" : "No purchases yet"}
                     </p>
                     <Link
                       href="/products"
                       className="cta-button px-6 py-2.5 rounded-full text-sm font-medium inline-flex items-center gap-2"
                     >
-                      {locale === "zh" ? "去逛逛 →" : "Browse Products →"}
+                      {locale === "zh" ? "浏览产品 →" : "Browse Products →"}
                     </Link>
                   </div>
                 ) : (
-                  purchases.map((p, i) => (
-                    <div
-                      key={i}
-                      className="glass-card rounded-2xl p-6 animate-fade-in"
-                      style={{ animationDelay: `${i * 100}ms` }}
-                    >
-                      <div className="flex items-start justify-between flex-wrap gap-4">
-                        <div className="flex items-start gap-4">
-                          <div className="text-3xl mt-0.5">
-                            {productIcons[p.slug] || "📦"}
-                          </div>
+                  <div className="space-y-4">
+                    {data.purchases.map((purchase) => (
+                      <div
+                        key={purchase.id}
+                        className="glass-card rounded-2xl p-6"
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
                           <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className="text-white font-bold">{p.product}</h3>
-                              <span className="text-xs text-white/20 bg-white/5 px-2 py-0.5 rounded">
-                                {productVersions[p.slug] || "v1.0"}
-                              </span>
-                            </div>
-                            <p className="text-white/30 text-sm">
+                            <h3 className="text-lg font-bold text-white">
+                              {purchase.product}
+                            </h3>
+                            <p className="text-white/40 text-sm">
                               {locale === "zh" ? "购买于" : "Purchased"}{" "}
-                              {new Date(p.date).toLocaleDateString(locale === "zh" ? "zh-CN" : "en-US", {
-                                year: "numeric", month: "short", day: "numeric",
-                              })}{" "}
-                              · ${p.amount} · Stripe
+                              {new Date(purchase.date).toLocaleDateString(
+                                locale === "zh" ? "zh-CN" : "en-US",
+                                { year: "numeric", month: "long", day: "numeric" }
+                              )}{" "}
+                              · ${purchase.amount} {purchase.currency}
                             </p>
                           </div>
+                          <div className="flex items-center gap-2">
+                            <a
+                              href={purchase.downloadUrl}
+                              download
+                              className="cta-button px-5 py-2 rounded-full text-sm font-medium inline-flex items-center gap-1.5"
+                            >
+                              📦 Download
+                            </a>
+                          </div>
                         </div>
-                        <div className="flex gap-2">
-                          <a
-                            href={p.downloadUrl}
-                            download
-                            className="cta-button px-5 py-2 rounded-full text-sm font-medium"
-                          >
-                            {locale === "zh" ? "下载" : "Download"}
-                          </a>
-                        </div>
-                      </div>
 
-                      {/* Install command */}
-                      <div className="mt-4 pt-4 border-t border-white/5">
-                        <p className="text-white/30 text-xs mb-2">
-                          {locale === "zh"
-                            ? "告诉你的 OpenClaw 助手安装："
-                            : "Tell your OpenClaw assistant to install:"}
-                        </p>
-                        <div className="flex items-center gap-2 bg-black/50 rounded-xl px-4 py-3 border border-white/5">
-                          <code className="text-green-400 text-sm flex-1 overflow-x-auto">
-                            {p.installCmd}
-                          </code>
+                        {/* Install command */}
+                        <div className="bg-black/50 rounded-xl p-3 border border-white/10 flex items-center justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-white/30 text-xs mb-1">
+                              {locale === "zh"
+                                ? "安装到 OpenClaw："
+                                : "Install to OpenClaw:"}
+                            </p>
+                            <code className="text-green-400 text-sm block truncate">
+                              {purchase.installCmd}
+                            </code>
+                          </div>
                           <button
-                            onClick={() => copyCmd(i, p.installCmd)}
-                            className="shrink-0 text-white/30 hover:text-white text-sm px-3 py-1 rounded-lg hover:bg-white/5 transition"
+                            onClick={() => handleCopy(purchase.installCmd, purchase.id)}
+                            className="glass-pill px-3 py-1.5 rounded-lg text-xs text-white/60 hover:text-white shrink-0"
                           >
-                            {copiedIdx === i
-                              ? locale === "zh" ? "✓ 已复制" : "✓ Copied"
-                              : locale === "zh" ? "复制" : "Copy"}
+                            {copied === purchase.id ? "✓ Copied" : "Copy"}
                           </button>
                         </div>
                       </div>
-                    </div>
-                  ))
+                    ))}
+                  </div>
                 )}
               </div>
             )}
 
             {activeTab === "settings" && (
-              <div className="space-y-4 animate-fade-in">
-                <div>
-                  <h2 className="text-xl font-bold text-white mb-1">
+              <div>
+                <div className="mb-6">
+                  <h2 className="text-2xl font-bold text-white mb-1">
                     {locale === "zh" ? "设置" : "Settings"}
                   </h2>
-                  <p className="text-white/40 text-sm">
-                    {locale === "zh" ? "管理你的账户" : "Manage your account"}
-                  </p>
                 </div>
 
-                <div className="glass-card rounded-2xl p-6">
-                  <h3 className="text-white font-medium mb-3">
-                    {locale === "zh" ? "邮箱" : "Email"}
-                  </h3>
-                  <p className="text-white/50">{email}</p>
-                </div>
-
-                <div className="glass-card rounded-2xl p-6">
-                  <h3 className="text-white font-medium mb-3">
-                    {locale === "zh" ? "需要帮助？" : "Need Help?"}
-                  </h3>
-                  <div className="flex flex-wrap gap-3">
-                    <a
-                      href="https://t.me/+2p-LBUUrJ1BjMjNl"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="glass-pill px-4 py-2 rounded-full text-sm text-white/60 hover:text-white"
-                    >
-                      🦞 Telegram
-                    </a>
-                    <a
-                      href="mailto:support@lobsterfarmer.com"
-                      className="glass-pill px-4 py-2 rounded-full text-sm text-white/60 hover:text-white"
-                    >
-                      ✉️ support@lobsterfarmer.com
-                    </a>
+                <div className="glass-card rounded-2xl p-6 space-y-4">
+                  <div>
+                    <label className="text-white/40 text-sm">
+                      {locale === "zh" ? "邮箱" : "Email"}
+                    </label>
+                    <p className="text-white">{data.email}</p>
+                  </div>
+                  <div className="border-t border-white/10 pt-4">
+                    <label className="text-white/40 text-sm">
+                      {locale === "zh" ? "需要帮助？" : "Need help?"}
+                    </label>
+                    <p className="text-white/60 text-sm mt-1">
+                      {locale === "zh"
+                        ? "联系 support@lobsterfarmer.com 或加入"
+                        : "Contact support@lobsterfarmer.com or join"}{" "}
+                      <a
+                        href="https://t.me/+2p-LBUUrJ1BjMjNl"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#E74C3C] hover:underline"
+                      >
+                        Telegram
+                      </a>
+                    </p>
                   </div>
                 </div>
               </div>
