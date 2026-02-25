@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
       const resend = getResend();
       if (resend) {
         await resend.emails.send({
-        from: "养虾户 Lobster Farmer <onboarding@resend.dev>",
+        from: "养虾户 Lobster Farmer <noreply@lobsterfarmer.com>",
         to: [customerEmail],
         subject: `🦞 Your ${productName} is ready!`,
         html: `
