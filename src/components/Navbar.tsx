@@ -15,6 +15,7 @@ export default function Navbar() {
     { label: t.nav.tools, href: "/#tools" },
     { label: t.nav.community, href: "/#community" },
     { label: t.nav.contact, href: "/#contact" },
+    { label: locale === "zh" ? "我的购买" : "Dashboard", href: "/dashboard", isPage: true },
   ];
 
   return (
