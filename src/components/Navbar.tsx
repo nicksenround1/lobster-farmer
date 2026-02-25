@@ -2,11 +2,18 @@
 
 import Link from "next/link";
 import { useLocale } from "@/context/LocaleContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function Navbar() {
   const { locale, setLocale, t } = useLocale();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => { if (r.ok) setIsLoggedIn(true); })
+      .catch(() => {});
+  }, []);
 
   const navItems = [
     { label: t.nav.about, href: "/#about" },
@@ -15,14 +22,13 @@ export default function Navbar() {
     { label: t.nav.tools, href: "/#tools" },
     { label: t.nav.community, href: "/#community" },
     { label: t.nav.contact, href: "/#contact" },
-    { label: locale === "zh" ? "我的购买" : "Dashboard", href: "/dashboard", isPage: true },
   ];
 
   return (
     <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-4xl">
       <div className="glass-nav rounded-full px-6 py-3 flex items-center justify-between">
         {/* Logo */}
-        <a href="#" className="flex items-center gap-2 text-lg font-bold shrink-0">
+        <a href="/" className="flex items-center gap-2 text-lg font-bold shrink-0">
           <span className="text-xl">🦞</span>
           <span className="text-white hidden sm:inline">养虾户</span>
         </a>
@@ -52,6 +58,16 @@ export default function Navbar() {
 
         {/* Controls */}
         <div className="flex items-center gap-2 shrink-0">
+          {/* Dashboard / Login button */}
+          <Link
+            href={isLoggedIn ? "/dashboard" : "/login"}
+            className="cta-button px-4 py-1.5 rounded-full text-xs font-medium hidden sm:inline-flex items-center gap-1.5"
+          >
+            {isLoggedIn
+              ? locale === "zh" ? "📦 Dashboard" : "📦 Dashboard"
+              : locale === "zh" ? "登录" : "Sign In"}
+          </Link>
+
           {/* Locale Toggle */}
           <button
             onClick={() => setLocale(locale === "zh" ? "en" : "zh")}
@@ -100,6 +116,15 @@ export default function Navbar() {
               </a>
             )
           )}
+          <Link
+            href={isLoggedIn ? "/dashboard" : "/login"}
+            onClick={() => setMobileOpen(false)}
+            className="block px-4 py-2.5 text-sm text-[#E74C3C] font-medium rounded-xl hover:bg-white/5 transition-colors"
+          >
+            {isLoggedIn
+              ? locale === "zh" ? "📦 Dashboard" : "📦 Dashboard"
+              : locale === "zh" ? "🔑 登录" : "🔑 Sign In"}
+          </Link>
         </div>
       )}
     </nav>

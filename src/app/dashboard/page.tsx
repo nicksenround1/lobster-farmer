@@ -1,163 +1,298 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useLocale } from "@/context/LocaleContext";
 
-type Status = "idle" | "loading" | "success" | "error" | "not-found";
+interface Purchase {
+  product: string;
+  slug: string;
+  date: string;
+  amount: string;
+  downloadUrl: string;
+  installCmd: string;
+}
+
+type Tab = "purchases" | "settings";
 
 function DashboardContent() {
   const { locale } = useLocale();
+  const router = useRouter();
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<Status>("idle");
-  const [message, setMessage] = useState("");
-  const [count, setCount] = useState(0);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<Tab>("purchases");
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) return;
-
-    setStatus("loading");
-
+  const fetchData = useCallback(async () => {
     try {
-      const res = await fetch("/api/dashboard", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
+      const meRes = await fetch("/api/auth/me");
+      if (!meRes.ok) {
+        router.push("/login");
+        return;
+      }
+      const meData = await meRes.json();
+      setEmail(meData.email);
 
-      const data = await res.json();
-
-      if (res.ok) {
-        setStatus("success");
-        setCount(data.count || 0);
-      } else if (res.status === 404) {
-        setStatus("not-found");
-      } else {
-        setStatus("error");
-        setMessage(data.error || "Something went wrong");
+      const dashRes = await fetch("/api/dashboard");
+      if (dashRes.ok) {
+        const dashData = await dashRes.json();
+        setPurchases(dashData.purchases || []);
       }
     } catch {
-      setStatus("error");
-      setMessage("Network error");
+      router.push("/login");
+    } finally {
+      setLoading(false);
     }
+  }, [router]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
   };
+
+  const copyCmd = (idx: number, cmd: string) => {
+    navigator.clipboard.writeText(cmd);
+    setCopiedIdx(idx);
+    setTimeout(() => setCopiedIdx(null), 2000);
+  };
+
+  const productIcons: Record<string, string> = {
+    "starter-pack": "📦",
+    "lobster-persona": "🦞",
+    "lobster-bundle": "🎁",
+  };
+
+  const productVersions: Record<string, string> = {
+    "starter-pack": "v1.0",
+    "lobster-persona": "v1.0",
+    "lobster-bundle": "v1.0",
+  };
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-white/40 text-sm">Loading...</div>
+      </main>
+    );
+  }
+
+  const initials = email ? email.substring(0, 2).toUpperCase() : "??";
 
   return (
     <main className="min-h-screen bg-black relative pt-28 pb-20 px-4">
-      <div className="glow-orb glow-orb-purple w-[500px] h-[500px] top-1/4 left-1/4 opacity-20" />
+      <div className="glow-orb glow-orb-purple w-[400px] h-[400px] top-20 right-1/4 opacity-10" />
 
-      <div className="max-w-lg mx-auto relative z-10">
+      <div className="max-w-4xl mx-auto relative z-10">
         {/* Header */}
-        <div className="text-center mb-12 animate-fade-in">
-          <div className="text-5xl mb-4">🦞</div>
-          <h1 className="text-3xl lg:text-4xl font-bold text-white mb-3 text-glow-white">
-            {locale === "zh" ? "我的购买" : "My Purchases"}
-          </h1>
-          <p className="text-white/40 text-lg">
-            {locale === "zh"
-              ? "输入购买时使用的邮箱，下载链接将发送到你的邮箱"
-              : "Enter your purchase email to receive download links"}
-          </p>
-        </div>
-
-        {/* Email form */}
-        <div className="glass-card rounded-3xl p-8 animate-fade-in animate-delay-100">
-          {status === "success" ? (
-            <div className="text-center py-6">
-              <div className="text-5xl mb-4">✉️</div>
-              <h2 className="text-xl font-bold text-white mb-3">
-                {locale === "zh" ? "已发送！" : "Sent!"}
-              </h2>
-              <p className="text-white/50 mb-2">
-                {locale === "zh"
-                  ? `${count} 个产品的下载链接已发送到`
-                  : `Download links for ${count} product(s) sent to`}
-              </p>
-              <p className="text-white font-medium mb-6">{email}</p>
-              <p className="text-white/30 text-sm mb-6">
-                {locale === "zh"
-                  ? "请检查收件箱（包括垃圾邮件），链接 72 小时内有效"
-                  : "Check your inbox (and spam). Links valid for 72 hours."}
-              </p>
-              <button
-                onClick={() => { setStatus("idle"); setEmail(""); }}
-                className="glass-pill px-6 py-2.5 rounded-full text-sm text-white/60 hover:text-white"
-              >
-                {locale === "zh" ? "重新查询" : "Try another email"}
-              </button>
-            </div>
-          ) : status === "not-found" ? (
-            <div className="text-center py-6">
-              <div className="text-5xl mb-4">🤔</div>
-              <h2 className="text-xl font-bold text-white mb-3">
-                {locale === "zh" ? "未找到购买记录" : "No Purchases Found"}
-              </h2>
-              <p className="text-white/50 mb-6">
-                {locale === "zh"
-                  ? "该邮箱没有购买记录。请确认是否使用了其他邮箱付款。"
-                  : "No purchases found for this email. Please check if you used a different email."}
-              </p>
-              <div className="flex flex-col gap-3 items-center">
-                <button
-                  onClick={() => { setStatus("idle"); setEmail(""); }}
-                  className="glass-pill px-6 py-2.5 rounded-full text-sm text-white/60 hover:text-white"
-                >
-                  {locale === "zh" ? "换个邮箱试试" : "Try another email"}
-                </button>
-                <a
-                  href="mailto:support@lobsterfarmer.com"
-                  className="text-[#E74C3C] text-sm hover:underline"
-                >
-                  {locale === "zh" ? "联系客服" : "Contact Support"}
-                </a>
+        <div className="glass-card rounded-3xl p-8 mb-8 animate-fade-in">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#E74C3C] to-[#C0392B] flex items-center justify-center text-white font-bold text-sm">
+                {initials}
+              </div>
+              <div>
+                <p className="text-white/40 text-xs uppercase tracking-wider">
+                  {locale === "zh" ? "账户面板" : "Account Dashboard"}
+                </p>
+                <h1 className="text-xl font-bold text-white">
+                  {locale === "zh" ? `欢迎回来` : `Welcome back`}
+                </h1>
+                <p className="text-white/40 text-sm">{email}</p>
               </div>
             </div>
-          ) : (
-            <form onSubmit={handleSubmit}>
-              <label className="block text-white/60 text-sm mb-2">
-                {locale === "zh" ? "购买时使用的邮箱" : "Purchase Email"}
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="your@email.com"
-                required
-                className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/20 focus:outline-none focus:border-[#E74C3C]/50 mb-4"
-              />
-
-              {status === "error" && (
-                <p className="text-red-400 text-sm mb-4">{message}</p>
-              )}
-
-              <button
-                type="submit"
-                disabled={status === "loading"}
-                className="cta-button w-full px-8 py-3.5 rounded-full text-sm font-medium disabled:opacity-50"
+            <div className="flex gap-3">
+              <Link
+                href="/products"
+                className="glass-pill px-5 py-2 rounded-full text-sm text-white/60 hover:text-white"
               >
-                {status === "loading"
-                  ? locale === "zh" ? "查询中..." : "Looking up..."
-                  : locale === "zh" ? "发送下载链接到邮箱 →" : "Send Download Links →"}
+                {locale === "zh" ? "浏览产品" : "Browse Products"}
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="glass-pill px-5 py-2 rounded-full text-sm text-white/60 hover:text-white"
+              >
+                {locale === "zh" ? "退出" : "Sign Out"}
               </button>
-
-              <p className="text-white/20 text-xs text-center mt-4">
-                {locale === "zh"
-                  ? "我们会通过邮件发送带有下载链接的购买记录，不需要注册账号"
-                  : "We'll email you download links for all your purchases. No account needed."}
-              </p>
-            </form>
-          )}
+            </div>
+          </div>
         </div>
 
-        {/* Bottom links */}
-        <div className="text-center mt-8 animate-fade-in animate-delay-200 space-y-3">
-          <Link href="/products" className="text-white/40 hover:text-white/70 text-sm block">
-            {locale === "zh" ? "← 浏览产品" : "← Browse Products"}
-          </Link>
-          <Link href="/" className="text-white/40 hover:text-white/70 text-sm block">
-            {locale === "zh" ? "回到首页" : "Back to Home"}
-          </Link>
+        {/* Body with sidebar */}
+        <div className="flex flex-col md:flex-row gap-6">
+          {/* Sidebar */}
+          <div className="md:w-48 shrink-0">
+            <div className="flex md:flex-col gap-2">
+              {(
+                [
+                  { key: "purchases" as Tab, label: locale === "zh" ? "我的购买" : "My Purchases", icon: "📦" },
+                  { key: "settings" as Tab, label: locale === "zh" ? "设置" : "Settings", icon: "⚙️" },
+                ] as const
+              ).map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all text-left w-full ${
+                    activeTab === tab.key
+                      ? "bg-[#E74C3C]/20 text-[#E74C3C] border border-[#E74C3C]/30"
+                      : "text-white/40 hover:text-white/70 hover:bg-white/5"
+                  }`}
+                >
+                  <span>{tab.icon}</span>
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Main content */}
+          <div className="flex-1 min-w-0">
+            {activeTab === "purchases" && (
+              <div className="space-y-4 animate-fade-in">
+                <div>
+                  <h2 className="text-xl font-bold text-white mb-1">
+                    {locale === "zh" ? "我的购买" : "My Purchases"}
+                  </h2>
+                  <p className="text-white/40 text-sm">
+                    {locale === "zh"
+                      ? "查看已购买的产品，随时重新下载"
+                      : "Access your purchased products and re-download any time"}
+                  </p>
+                </div>
+
+                {/* Install hint */}
+                <div className="glass-card rounded-xl p-4 border-l-2 border-cyan-500/50">
+                  <p className="text-white/50 text-sm">
+                    {locale === "zh"
+                      ? "💡 你可以直接下载文件，或复制安装命令让 OpenClaw 自动安装。"
+                      : "💡 Download files directly, or copy the install command for your OpenClaw assistant."}
+                  </p>
+                </div>
+
+                {purchases.length === 0 ? (
+                  <div className="glass-card rounded-2xl p-12 text-center">
+                    <div className="text-4xl mb-4">🛒</div>
+                    <p className="text-white/40 mb-4">
+                      {locale === "zh" ? "还没有购买记录" : "No purchases yet"}
+                    </p>
+                    <Link
+                      href="/products"
+                      className="cta-button px-6 py-2.5 rounded-full text-sm font-medium inline-flex items-center gap-2"
+                    >
+                      {locale === "zh" ? "去逛逛 →" : "Browse Products →"}
+                    </Link>
+                  </div>
+                ) : (
+                  purchases.map((p, i) => (
+                    <div
+                      key={i}
+                      className="glass-card rounded-2xl p-6 animate-fade-in"
+                      style={{ animationDelay: `${i * 100}ms` }}
+                    >
+                      <div className="flex items-start justify-between flex-wrap gap-4">
+                        <div className="flex items-start gap-4">
+                          <div className="text-3xl mt-0.5">
+                            {productIcons[p.slug] || "📦"}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="text-white font-bold">{p.product}</h3>
+                              <span className="text-xs text-white/20 bg-white/5 px-2 py-0.5 rounded">
+                                {productVersions[p.slug] || "v1.0"}
+                              </span>
+                            </div>
+                            <p className="text-white/30 text-sm">
+                              {locale === "zh" ? "购买于" : "Purchased"}{" "}
+                              {new Date(p.date).toLocaleDateString(locale === "zh" ? "zh-CN" : "en-US", {
+                                year: "numeric", month: "short", day: "numeric",
+                              })}{" "}
+                              · ${p.amount} · Stripe
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <a
+                            href={p.downloadUrl}
+                            download
+                            className="cta-button px-5 py-2 rounded-full text-sm font-medium"
+                          >
+                            {locale === "zh" ? "下载" : "Download"}
+                          </a>
+                        </div>
+                      </div>
+
+                      {/* Install command */}
+                      <div className="mt-4 pt-4 border-t border-white/5">
+                        <p className="text-white/30 text-xs mb-2">
+                          {locale === "zh"
+                            ? "告诉你的 OpenClaw 助手安装："
+                            : "Tell your OpenClaw assistant to install:"}
+                        </p>
+                        <div className="flex items-center gap-2 bg-black/50 rounded-xl px-4 py-3 border border-white/5">
+                          <code className="text-green-400 text-sm flex-1 overflow-x-auto">
+                            {p.installCmd}
+                          </code>
+                          <button
+                            onClick={() => copyCmd(i, p.installCmd)}
+                            className="shrink-0 text-white/30 hover:text-white text-sm px-3 py-1 rounded-lg hover:bg-white/5 transition"
+                          >
+                            {copiedIdx === i
+                              ? locale === "zh" ? "✓ 已复制" : "✓ Copied"
+                              : locale === "zh" ? "复制" : "Copy"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            {activeTab === "settings" && (
+              <div className="space-y-4 animate-fade-in">
+                <div>
+                  <h2 className="text-xl font-bold text-white mb-1">
+                    {locale === "zh" ? "设置" : "Settings"}
+                  </h2>
+                  <p className="text-white/40 text-sm">
+                    {locale === "zh" ? "管理你的账户" : "Manage your account"}
+                  </p>
+                </div>
+
+                <div className="glass-card rounded-2xl p-6">
+                  <h3 className="text-white font-medium mb-3">
+                    {locale === "zh" ? "邮箱" : "Email"}
+                  </h3>
+                  <p className="text-white/50">{email}</p>
+                </div>
+
+                <div className="glass-card rounded-2xl p-6">
+                  <h3 className="text-white font-medium mb-3">
+                    {locale === "zh" ? "需要帮助？" : "Need Help?"}
+                  </h3>
+                  <div className="flex flex-wrap gap-3">
+                    <a
+                      href="https://t.me/+2p-LBUUrJ1BjMjNl"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="glass-pill px-4 py-2 rounded-full text-sm text-white/60 hover:text-white"
+                    >
+                      🦞 Telegram
+                    </a>
+                    <a
+                      href="mailto:support@lobsterfarmer.com"
+                      className="glass-pill px-4 py-2 rounded-full text-sm text-white/60 hover:text-white"
+                    >
+                      ✉️ support@lobsterfarmer.com
+                    </a>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </main>
