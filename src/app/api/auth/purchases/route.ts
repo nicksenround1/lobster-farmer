@@ -28,9 +28,10 @@ const productSlugMap: Record<string, { name: string; slug: string }> = {
 };
 
 function resolveProduct(session: Stripe.Checkout.Session) {
-  // Try line items first
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const lineItems = (session as any).line_items as { data?: Array<{ price?: { product?: string }; description?: string }> } | undefined;
+  const lineItems = (session as any).line_items as
+    | { data?: Array<{ price?: { product?: string }; description?: string }> }
+    | undefined;
   if (lineItems?.data) {
     for (const item of lineItems.data) {
       const prodId = item.price?.product as string;
@@ -39,15 +40,13 @@ function resolveProduct(session: Stripe.Checkout.Session) {
       }
     }
   }
-  // Fallback: match by amount
   const amount = session.amount_total || 0;
   if (amount <= 200) return { name: "Starter Pack", slug: "starter-pack" };
-  if (amount <= 5000) return { name: "Lobster Persona", slug: "lobster-persona" };
+  if (amount <= 5500) return { name: "Lobster Persona", slug: "lobster-persona" };
   return { name: "Lobster Bundle", slug: "lobster-bundle" };
 }
 
 export async function GET(req: NextRequest) {
-  // Accept token from Authorization header or cookie
   const authHeader = req.headers.get("authorization");
   const token = authHeader?.startsWith("Bearer ")
     ? authHeader.slice(7)
@@ -68,22 +67,37 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Search checkout sessions by email
-    const sessions = await stripe.checkout.sessions.list({
-      limit: 100,
-      expand: ["data.line_items"],
-    });
+    // List ONLY completed sessions (not all sessions)
+    // Paginate to ensure we get all completed ones
+    const allCompleted: Stripe.Checkout.Session[] = [];
+    let hasMore = true;
+    let startingAfter: string | undefined;
 
-    const purchases = sessions.data
-      .filter(
-        (s) =>
-          s.status === "complete" &&
-          (s.customer_details?.email?.toLowerCase() === user.email ||
-            s.customer_email?.toLowerCase() === user.email)
-      )
+    while (hasMore) {
+      const params: Stripe.Checkout.SessionListParams = {
+        limit: 100,
+        status: "complete",
+        expand: ["data.line_items"],
+      };
+      if (startingAfter) params.starting_after = startingAfter;
+
+      const batch = await stripe.checkout.sessions.list(params);
+      allCompleted.push(...batch.data);
+      hasMore = batch.has_more;
+      if (batch.data.length > 0) {
+        startingAfter = batch.data[batch.data.length - 1].id;
+      }
+    }
+
+    const purchases = allCompleted
+      .filter((s) => {
+        const detailEmail = s.customer_details?.email?.toLowerCase();
+        const custEmail = s.customer_email?.toLowerCase();
+        return detailEmail === user.email || custEmail === user.email;
+      })
       .map((s) => {
         const product = resolveProduct(s);
-        const token = generateDownloadToken(product.slug);
+        const dlToken = generateDownloadToken(product.slug);
         return {
           id: s.id,
           product: product.name,
@@ -91,7 +105,7 @@ export async function GET(req: NextRequest) {
           date: new Date((s.created || 0) * 1000).toISOString(),
           amount: ((s.amount_total || 0) / 100).toFixed(2),
           currency: (s.currency || "usd").toUpperCase(),
-          downloadUrl: `/api/download?product=${product.slug}&token=${token}`,
+          downloadUrl: `/api/download?product=${product.slug}&token=${dlToken}`,
           installCmd: `unzip ${product.slug}-v1.0.zip -d ~/clawd/`,
         };
       });
