@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readFile } from "fs/promises";
 import { join } from "path";
+import { existsSync } from "fs";
 import crypto from "crypto";
 
-// Simple token-based download protection
-// Token is generated at checkout and included in success page URL + email
 const DOWNLOAD_SECRET = process.env.DOWNLOAD_SECRET || "lobster-dl-secret-2026";
 
 function verifyToken(product: string, token: string): boolean {
-  // Token format: HMAC-SHA256(product + timestamp_hour, secret)
-  // Valid for 72 hours (we check current hour ± 72)
-  const now = Math.floor(Date.now() / 3600000); // current hour
+  const now = Math.floor(Date.now() / 3600000);
   for (let i = -72; i <= 0; i++) {
     const expected = crypto
       .createHmac("sha256", DOWNLOAD_SECRET)
@@ -20,15 +17,6 @@ function verifyToken(product: string, token: string): boolean {
     if (token === expected) return true;
   }
   return false;
-}
-
-export function generateDownloadToken(product: string): string {
-  const hour = Math.floor(Date.now() / 3600000);
-  return crypto
-    .createHmac("sha256", DOWNLOAD_SECRET)
-    .update(product + hour)
-    .digest("hex")
-    .substring(0, 16);
 }
 
 const productFiles: Record<string, string> = {
@@ -54,26 +42,52 @@ export async function GET(req: NextRequest) {
 
   if (!verifyToken(product, token)) {
     return NextResponse.json(
-      { error: "Invalid or expired download link. Please check your email for a valid link, or contact support@lobsterfarmer.com" },
+      {
+        error:
+          "Invalid or expired download link. Log in at lobsterfarmer.com/dashboard to get a fresh link, or contact support@lobsterfarmer.com",
+      },
       { status: 403 }
     );
   }
 
-  try {
-    const filePath = join(process.cwd(), "private-downloads", productFiles[product]);
-    const fileBuffer = await readFile(filePath);
+  // Try multiple paths (Vercel serverless has different cwd than local)
+  const fileName = productFiles[product];
+  const possiblePaths = [
+    join(process.cwd(), "private-downloads", fileName),
+    join(process.cwd(), "..", "private-downloads", fileName),
+    join("/var/task", "private-downloads", fileName),
+  ];
 
-    return new NextResponse(fileBuffer, {
-      headers: {
-        "Content-Type": "application/zip",
-        "Content-Disposition": `attachment; filename="${productFiles[product]}"`,
-        "Cache-Control": "no-store",
-      },
-    });
-  } catch {
+  let fileBuffer: Buffer | null = null;
+  for (const filePath of possiblePaths) {
+    try {
+      if (existsSync(filePath)) {
+        fileBuffer = await readFile(filePath);
+        break;
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  if (!fileBuffer) {
+    console.error(
+      `File not found: ${fileName}. Tried: ${possiblePaths.join(", ")}`
+    );
     return NextResponse.json(
-      { error: "File not found" },
+      {
+        error:
+          "File temporarily unavailable. Please contact support@lobsterfarmer.com",
+      },
       { status: 500 }
     );
   }
+
+  return new NextResponse(new Uint8Array(fileBuffer), {
+    headers: {
+      "Content-Type": "application/zip",
+      "Content-Disposition": `attachment; filename="${fileName}"`,
+      "Cache-Control": "no-store",
+    },
+  });
 }

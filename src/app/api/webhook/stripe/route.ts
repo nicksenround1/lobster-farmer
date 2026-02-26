@@ -1,17 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
+import Stripe from "stripe";
 import { Resend } from "resend";
 import crypto from "crypto";
 
-function getResend() {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) {
-    console.warn("RESEND_API_KEY not set, emails will not be sent");
-    return null;
-  }
-  return new Resend(key);
+const DOWNLOAD_SECRET = process.env.DOWNLOAD_SECRET || "lobster-dl-secret-2026";
+
+function getStripe() {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) return null;
+  return new Stripe(key);
 }
 
-const DOWNLOAD_SECRET = process.env.DOWNLOAD_SECRET || "lobster-dl-secret-2026";
+function getResend() {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return null;
+  return new Resend(key);
+}
 
 function generateDownloadToken(product: string): string {
   const hour = Math.floor(Date.now() / 3600000);
@@ -30,46 +34,102 @@ const productMap: Record<string, { name: string; slug: string }> = {
   "prod_U2hnEpnOlolVU0": { name: "Lobster Bundle", slug: "lobster-bundle" },
 };
 
+// Fallback: match by amount (cents)
+function resolveProductByAmount(cents: number): { name: string; slug: string } {
+  if (cents <= 150) return { name: "Starter Pack", slug: "starter-pack" };
+  if (cents <= 5500) return { name: "Lobster Persona", slug: "lobster-persona" };
+  return { name: "Lobster Bundle", slug: "lobster-bundle" };
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.text();
     const sig = req.headers.get("stripe-signature");
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-    if (!sig) {
-      return NextResponse.json({ error: "No signature" }, { status: 400 });
+    // Verify Stripe signature if webhook secret is configured
+    const stripe = getStripe();
+    let event: Stripe.Event;
+
+    if (stripe && webhookSecret && sig) {
+      try {
+        event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
+      } catch (err) {
+        console.error("Webhook signature verification failed:", err);
+        return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+      }
+    } else {
+      // Fallback: parse without verification (log warning)
+      console.warn("Webhook signature not verified — STRIPE_WEBHOOK_SECRET not set");
+      if (!sig) {
+        return NextResponse.json({ error: "No signature" }, { status: 400 });
+      }
+      event = JSON.parse(body) as Stripe.Event;
     }
 
-    const event = JSON.parse(body);
-
     if (event.type === "checkout.session.completed") {
-      const session = event.data.object;
-      const customerEmail = session.customer_details?.email || session.customer_email;
+      const session = event.data.object as Stripe.Checkout.Session;
+      const customerEmail =
+        session.customer_details?.email || session.customer_email;
 
       if (!customerEmail) {
         console.log("No customer email found");
         return NextResponse.json({ received: true });
       }
 
-      // Match product
-      const lineItems = session.line_items?.data || [];
+      // Resolve product: try expanding line_items via Stripe API
       let productName = "Your Purchase";
       let productSlug = "starter-pack";
 
-      for (const item of lineItems) {
-        const prodId = item.price?.product;
-        if (prodId && productMap[prodId]) {
-          productName = productMap[prodId].name;
-          productSlug = productMap[prodId].slug;
-          break;
+      if (stripe) {
+        try {
+          const fullSession = await stripe.checkout.sessions.retrieve(
+            session.id,
+            { expand: ["line_items.data.price.product"] }
+          );
+          const lineItems = fullSession.line_items?.data || [];
+          for (const item of lineItems) {
+            const prodId =
+              typeof item.price?.product === "string"
+                ? item.price.product
+                : (item.price?.product as Stripe.Product)?.id;
+            if (prodId && productMap[prodId]) {
+              productName = productMap[prodId].name;
+              productSlug = productMap[prodId].slug;
+              break;
+            }
+          }
+          // If no match from line items, use product name from description
+          if (productName === "Your Purchase" && lineItems.length > 0) {
+            const desc = lineItems[0].description?.toLowerCase() || "";
+            if (desc.includes("bundle")) {
+              productName = "Lobster Bundle";
+              productSlug = "lobster-bundle";
+            } else if (desc.includes("persona")) {
+              productName = "Lobster Persona";
+              productSlug = "lobster-persona";
+            } else if (desc.includes("starter")) {
+              productName = "Starter Pack";
+              productSlug = "starter-pack";
+            }
+          }
+        } catch (e) {
+          console.warn("Failed to expand line_items, using amount fallback:", e);
         }
+      }
+
+      // Final fallback: match by amount
+      if (productName === "Your Purchase") {
+        const resolved = resolveProductByAmount(session.amount_total || 0);
+        productName = resolved.name;
+        productSlug = resolved.slug;
       }
 
       // Generate secure download token (valid 72 hours)
       const token = generateDownloadToken(productSlug);
       const downloadUrl = `https://lobsterfarmer.com/api/download?product=${productSlug}&token=${token}`;
-      const successUrl = `https://lobsterfarmer.com/checkout/success?product=${productSlug}&token=${token}`;
 
-      // Send delivery email with secure download link
+      // Send delivery email
       const resend = getResend();
       if (resend) {
         await resend.emails.send({
@@ -101,38 +161,33 @@ export async function POST(req: NextRequest) {
   </div>
 
   <div class="card">
-    <h2>📦 Step 1: Download</h2>
-    <p>Click below to download your product files (link valid for 72 hours):</p>
+    <h2>📦 Download</h2>
+    <p>Click below to download your files (link valid for 72 hours):</p>
     <a href="${downloadUrl}" class="btn">Download ${productName}</a>
-    <p style="font-size: 12px; color: #666; margin-top: 12px;">Link expired? Contact support@lobsterfarmer.com for a new one.</p>
+    <p style="font-size: 12px; color: #666; margin-top: 12px;">Link expired? Go to <a href="https://lobsterfarmer.com/dashboard" style="color: #E74C3C;">lobsterfarmer.com/dashboard</a> to get a new one.</p>
   </div>
 
   <div class="card">
-    <h2>🎯 Step 2: Install & Customize</h2>
-    <p>Extract the zip to your OpenClaw workspace, then edit:</p>
-    <p>→ <code>USER.md</code> — Add your info<br>→ <code>SOUL.md</code> — Tweak Agent personality<br>→ <code>HEARTBEAT.md</code> — Set up auto-checks</p>
+    <h2>⚡ Quick Install</h2>
+    <p>Extract to your OpenClaw workspace:</p>
+    <div class="code">unzip ${productSlug}-v1.0.zip -d ~/clawd/</div>
+    <p style="margin-top: 12px;">Then customize: <code>USER.md</code> → your info, <code>SOUL.md</code> → personality, <code>HEARTBEAT.md</code> → auto-checks</p>
   </div>
 
   <div class="card">
     <h2>💬 Need Help?</h2>
-    <p>Join our Telegram community for free tech support:</p>
     <a href="https://t.me/+2p-LBUUrJ1BjMjNl" class="btn" style="background: #333;">Join TG Group →</a>
   </div>
 
   <div class="footer">
-    <p>🦞 养虾户 / Lobster Farmer<br>
-    <a href="https://lobsterfarmer.com" style="color: #E74C3C;">lobsterfarmer.com</a></p>
-    <p>Questions? Reply to this email or contact support@lobsterfarmer.com</p>
+    <p>🦞 养虾户 / Lobster Farmer — <a href="https://lobsterfarmer.com" style="color: #E74C3C;">lobsterfarmer.com</a></p>
+    <p>Questions? support@lobsterfarmer.com</p>
   </div>
 </div>
 </body>
-</html>
-          `,
+</html>`,
         });
-
-        console.log(`Delivery email sent to ${customerEmail} for ${productName} (token: ${token})`);
-      } else {
-        console.log(`Resend not configured, skipping email for ${customerEmail}`);
+        console.log(`✅ Email sent to ${customerEmail} for ${productName}`);
       }
     }
 
