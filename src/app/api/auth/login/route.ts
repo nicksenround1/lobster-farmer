@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
-import { createMagicLinkToken } from "@/lib/auth";
+import { createOTPToken, generateOTP } from "@/lib/auth";
 
 function getResend() {
   const key = process.env.RESEND_API_KEY;
@@ -16,8 +16,8 @@ export async function POST(req: NextRequest) {
     }
 
     const cleanEmail = email.toLowerCase().trim();
-    const token = await createMagicLinkToken(cleanEmail);
-    const magicLink = `https://lobsterfarmer.com/api/auth/verify?token=${token}`;
+    const code = generateOTP();
+    const otpToken = await createOTPToken(cleanEmail, code);
 
     const resend = getResend();
     if (!resend) {
@@ -27,37 +27,39 @@ export async function POST(req: NextRequest) {
     await resend.emails.send({
       from: "养虾户 Lobster Farmer <noreply@lobsterfarmer.com>",
       to: [cleanEmail],
-      subject: "🦞 Sign in to Lobster Farmer",
+      subject: `🦞 Your login code: ${code}`,
       html: `
 <!DOCTYPE html>
 <html>
 <head>
 <style>
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0a; color: #e0e0e0; margin: 0; padding: 0; }
-  .container { max-width: 500px; margin: 0 auto; padding: 40px 20px; }
-  h1 { color: white; text-align: center; font-size: 24px; }
-  p { color: #a0a0a0; line-height: 1.6; text-align: center; }
-  .btn { display: block; width: fit-content; margin: 24px auto; background: #E74C3C; color: white; text-decoration: none; padding: 14px 32px; border-radius: 30px; font-weight: bold; font-size: 15px; }
-  .footer { text-align: center; margin-top: 30px; color: #555; font-size: 12px; }
+  body{font-family:-apple-system,sans-serif;background:#0a0a0a;color:#e0e0e0;margin:0;padding:0}
+  .c{max-width:400px;margin:0 auto;padding:40px 20px;text-align:center}
+  h1{color:white;font-size:24px}
+  .code{font-size:36px;font-weight:bold;letter-spacing:8px;color:#E74C3C;margin:24px 0;font-family:monospace}
+  p{color:#a0a0a0;line-height:1.6}
+  .f{margin-top:30px;color:#555;font-size:12px}
 </style>
 </head>
 <body>
-<div class="container">
-  <h1>🦞 Sign In</h1>
-  <p>Click the button below to sign in to your Lobster Farmer dashboard. This link expires in 15 minutes.</p>
-  <a href="${magicLink}" class="btn">Sign In →</a>
-  <p style="font-size:13px;color:#666;">If you didn't request this, you can safely ignore this email.</p>
-  <div class="footer">
-    <p>🦞 养虾户 / Lobster Farmer<br><a href="https://lobsterfarmer.com" style="color:#E74C3C;">lobsterfarmer.com</a></p>
+<div class="c">
+  <h1>🦞</h1>
+  <p>Your login code:</p>
+  <div class="code">${code}</div>
+  <p>Enter this code on the login page.<br>Valid for 10 minutes.</p>
+  <p style="font-size:13px;color:#666;">If you didn't request this, ignore this email.</p>
+  <div class="f">
+    <p>养虾户 / Lobster Farmer — <a href="https://lobsterfarmer.com" style="color:#E74C3C;">lobsterfarmer.com</a></p>
   </div>
 </div>
 </body>
 </html>`,
     });
 
-    return NextResponse.json({ success: true });
+    // Return OTP token (contains encrypted code + email, client sends it back with user's input)
+    return NextResponse.json({ success: true, otpToken });
   } catch (err) {
-    console.error("Magic link error:", err);
-    return NextResponse.json({ error: "Failed to send email" }, { status: 500 });
+    console.error("Login error:", err);
+    return NextResponse.json({ error: "Failed to send code" }, { status: 500 });
   }
 }

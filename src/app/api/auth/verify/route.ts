@@ -1,25 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyMagicLinkToken, createSessionToken } from "@/lib/auth";
+import { verifyOTPToken, createSessionToken } from "@/lib/auth";
 
-export async function GET(req: NextRequest) {
-  const token = req.nextUrl.searchParams.get("token");
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://lobsterfarmer.com";
+export async function POST(req: NextRequest) {
+  try {
+    const { otpToken, code } = await req.json();
 
-  if (!token) {
-    return NextResponse.redirect(`${baseUrl}/login?error=missing_token`);
+    if (!otpToken || !code) {
+      return NextResponse.json({ error: "Missing otpToken or code" }, { status: 400 });
+    }
+
+    const result = await verifyOTPToken(otpToken, code.toString().trim());
+    if (!result) {
+      return NextResponse.json({ error: "Invalid or expired code" }, { status: 401 });
+    }
+
+    // Create session JWT (7 days)
+    const sessionToken = await createSessionToken(result.email);
+
+    return NextResponse.json({
+      success: true,
+      sessionToken,
+      email: result.email,
+    });
+  } catch (err) {
+    console.error("Verify error:", err);
+    return NextResponse.json({ error: "Verification failed" }, { status: 500 });
   }
-
-  const result = await verifyMagicLinkToken(token);
-  if (!result) {
-    return NextResponse.redirect(`${baseUrl}/login?error=expired`);
-  }
-
-  // Create session JWT
-  const sessionToken = await createSessionToken(result.email);
-
-  // Redirect to dashboard with session token in URL fragment (not query param for security)
-  // The dashboard page will pick it up from the hash and store in localStorage
-  return NextResponse.redirect(
-    `${baseUrl}/dashboard#token=${sessionToken}`
-  );
 }
