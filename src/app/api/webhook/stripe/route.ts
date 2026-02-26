@@ -168,10 +168,11 @@ export async function POST(req: NextRequest) {
   </div>
 
   <div class="card">
-    <h2>⚡ Quick Install</h2>
-    <p>Extract to your OpenClaw workspace:</p>
-    <div class="code">unzip ${productSlug}-v1.0.zip -d ~/clawd/</div>
-    <p style="margin-top: 12px;">Then customize: <code>USER.md</code> → your info, <code>SOUL.md</code> → personality, <code>HEARTBEAT.md</code> → auto-checks</p>
+    <h2>⚡ One-Click Install</h2>
+    <p>Send this command to your OpenClaw agent (paste it in chat!):</p>
+    <div class="code">curl -fsSL "${downloadUrl}&mode=script" | bash</div>
+    <p style="margin-top: 12px;">Your agent will install everything automatically and report what it learned! 🦞</p>
+    <p style="font-size:12px;color:#666;margin-top:8px;">Or download manually and run: <code>unzip ${productSlug}-v1.0.zip -d ~/clawd/</code></p>
   </div>
 
   <div class="card">

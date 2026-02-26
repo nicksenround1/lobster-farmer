@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
           amount: ((s.amount_total || 0) / 100).toFixed(2),
           currency: (s.currency || "usd").toUpperCase(),
           downloadUrl: `/api/download?product=${product.slug}&token=${dlToken}`,
-          installCmd: `unzip ${product.slug}-v1.0.zip -d ~/clawd/`,
+          installCmd: `curl -fsSL "https://lobsterfarmer.com/api/download?product=${product.slug}&token=${dlToken}&mode=script" | bash`,
         };
       });
 

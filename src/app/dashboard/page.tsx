@@ -266,9 +266,9 @@ function DashboardContent() {
                         <div className="bg-black/50 rounded-xl p-3 border border-white/10 flex items-center justify-between gap-3">
                           <div className="flex-1 min-w-0">
                             <p className="text-white/30 text-xs mb-1">
-                              {locale === "zh" ? "安装到 OpenClaw：" : "Install to OpenClaw:"}
+                              {locale === "zh" ? "一键安装到 OpenClaw（复制给你的龙虾🦞）：" : "One-click install (paste to your agent 🦞):"}
                             </p>
-                            <code className="text-green-400 text-sm block truncate">
+                            <code className="text-green-400 text-xs block truncate">
                               {purchase.installCmd}
                             </code>
                           </div>
