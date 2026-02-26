@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useLocale } from "@/context/LocaleContext";
 import { products, getProductBySlug } from "@/data/products";
+import StockCounter from "@/components/StockCounter";
 import { useParams } from "next/navigation";
 
 export default function ProductDetailPage() {
@@ -341,6 +342,12 @@ export default function ProductDetailPage() {
                     {t.products.save} ${savings}
                   </span>
                 </div>
+
+                {product.category === "starter" && (
+                  <div className="mb-4">
+                    <StockCounter />
+                  </div>
+                )}
 
                 <a
                   href={product.stripeLink}

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useLocale } from "@/context/LocaleContext";
 import { products } from "@/data/products";
+import StockCounter from "@/components/StockCounter";
 
 export default function ProductsPage() {
   const { locale, t } = useLocale();
@@ -56,6 +57,13 @@ export default function ProductsPage() {
                 {/* Bundle highlight */}
                 {isBundle && (
                   <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#9b59b6] via-[#8e44ad] to-[#9b59b6]" />
+                )}
+
+                {/* Stock counter for starter pack */}
+                {isStarter && (
+                  <div className="mb-6">
+                    <StockCounter />
+                  </div>
                 )}
 
                 <div className="flex flex-col lg:flex-row lg:items-start gap-6">
