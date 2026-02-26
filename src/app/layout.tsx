@@ -27,6 +27,13 @@ export const metadata: Metadata = {
     "Crypto",
     "AI Automation",
   ],
+  icons: {
+    icon: [
+      { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16.png", sizes: "16x16", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
   openGraph: {
     title: "养虾户 | Lobster Farmer",
     description: "养一池 AI 虾兵蟹将，替你 7×24 冲浪",
