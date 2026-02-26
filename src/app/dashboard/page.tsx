@@ -51,22 +51,21 @@ function DashboardContent() {
   const [copied, setCopied] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
-    // Check URL hash for token (from magic link redirect)
+    // Check URL hash for token (from old magic link redirect - keep for compat)
     if (typeof window !== "undefined" && window.location.hash) {
       const hash = window.location.hash.slice(1);
       const params = new URLSearchParams(hash);
       const hashToken = params.get("token");
       if (hashToken) {
         setToken(hashToken);
-        // Clean up URL
         window.history.replaceState(null, "", window.location.pathname);
       }
     }
 
     const token = getToken();
     if (!token) {
-      router.push("/login");
-      return;
+      setLoading(false);
+      return; // Don't redirect, just show "please login"
     }
 
     try {
@@ -75,19 +74,28 @@ function DashboardContent() {
       });
       if (res.status === 401) {
         clearToken();
-        router.push("/login");
-        return;
+        setLoading(false);
+        return; // Show "please login", don't redirect
       }
       if (res.ok) {
         const json = await res.json();
         setData(json);
+      } else {
+        // Non-401 error (e.g. 500) - show data as empty, don't redirect
+        console.error("Purchases API error:", res.status);
+        // Still show dashboard with empty purchases
+        const meRes = await fetch("/api/auth/me", { headers: authHeaders() });
+        if (meRes.ok) {
+          const me = await meRes.json();
+          setData({ email: me.email, purchases: [] });
+        }
       }
-    } catch {
-      // ignore
+    } catch (err) {
+      console.error("Dashboard fetch error:", err);
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, []);
 
   useEffect(() => {
     fetchData();

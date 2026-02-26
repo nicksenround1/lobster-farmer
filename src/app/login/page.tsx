@@ -98,7 +98,9 @@ function LoginContent() {
 
       if (res.ok && data.sessionToken) {
         localStorage.setItem("lobster_session", data.sessionToken);
-        router.push("/dashboard");
+        // Use window.location for hard navigation (not Next.js router)
+        // This ensures localStorage is fully committed before Dashboard loads
+        window.location.href = "/dashboard";
       } else {
         setErrorMsg(
           locale === "zh" ? "验证码错误或已过期" : "Invalid or expired code"
