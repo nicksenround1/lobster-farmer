@@ -31,7 +31,7 @@ export default function Navbar() {
       <div className="glass-nav rounded-full px-6 py-3 flex items-center justify-between">
         {/* Logo */}
         <a href="/" className="flex items-center gap-2 text-lg font-bold shrink-0">
-          <Image src="/logo.jpg" alt="养虾户" width={32} height={32} className="rounded-md" />
+          <Image src="/logo.png" alt="养虾户" width={32} height={32} className="rounded-md" />
           <span className="text-white hidden sm:inline">养虾户</span>
         </a>
 
