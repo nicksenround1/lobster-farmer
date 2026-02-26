@@ -49,7 +49,7 @@ export const products: Product[] = [
     slug: "starter-pack",
     icon: "🎣",
     price: 1,
-    originalPrice: 10,
+    originalPrice: 20,
     category: "starter",
     tag: { zh: "限前 100 位", en: "First 100 Only" },
     stripeLink: "https://buy.stripe.com/28EaEY1LI7jM28w1lE2VG03",
