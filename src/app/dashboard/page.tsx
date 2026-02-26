@@ -67,13 +67,26 @@ function DashboardContent() {
   if (loading) {
     return (
       <main className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-white/40 animate-pulse">Loading...</div>
+        <div className="text-center">
+          <div className="text-5xl mb-4 animate-bounce">🦞</div>
+          <p className="text-white/40 animate-pulse text-lg">Loading dashboard...</p>
+        </div>
       </main>
     );
   }
 
   if (!data) {
-    return null;
+    return (
+      <main className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-5xl mb-4">🔒</div>
+          <p className="text-white/50 mb-4">{locale === "zh" ? "请先登录" : "Please sign in first"}</p>
+          <a href="/login" className="cta-button px-6 py-2.5 rounded-full text-sm font-medium">
+            {locale === "zh" ? "去登录 →" : "Sign In →"}
+          </a>
+        </div>
+      </main>
+    );
   }
 
   const initials = data.email.substring(0, 2).toUpperCase();
