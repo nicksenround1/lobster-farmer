@@ -20,29 +20,9 @@ function generateDownloadToken(product: string): string {
     .substring(0, 16);
 }
 
-const productSlugMap: Record<string, { name: string; slug: string }> = {
-  "prod_U2kCKFHP7zts2r": { name: "Starter Pack", slug: "starter-pack" },
-  "prod_U2hnK4QosbVdpE": { name: "Lobster Persona", slug: "lobster-persona" },
-  "prod_U2hnhpQ5THu5uh": { name: "Lobster Bundle", slug: "lobster-bundle" },
-  "prod_U2hnEpnOlolVU0": { name: "Lobster Bundle", slug: "lobster-bundle" },
-};
-
-function resolveProduct(session: Stripe.Checkout.Session) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const lineItems = (session as any).line_items as
-    | { data?: Array<{ price?: { product?: string }; description?: string }> }
-    | undefined;
-  if (lineItems?.data) {
-    for (const item of lineItems.data) {
-      const prodId = item.price?.product as string;
-      if (prodId && productSlugMap[prodId]) {
-        return productSlugMap[prodId];
-      }
-    }
-  }
-  const amount = session.amount_total || 0;
-  if (amount <= 200) return { name: "Starter Pack", slug: "starter-pack" };
-  if (amount <= 5500) return { name: "Lobster Persona", slug: "lobster-persona" };
+function resolveProductByAmount(cents: number): { name: string; slug: string } {
+  if (cents <= 150) return { name: "Starter Pack", slug: "starter-pack" };
+  if (cents <= 5500) return { name: "Lobster Persona", slug: "lobster-persona" };
   return { name: "Lobster Bundle", slug: "lobster-bundle" };
 }
 
@@ -63,40 +43,27 @@ export async function GET(req: NextRequest) {
 
   const stripe = getStripe();
   if (!stripe) {
-    return NextResponse.json({ error: "Service unavailable" }, { status: 500 });
+    return NextResponse.json(
+      { email: user.email, purchases: [], debug: "stripe_unavailable" },
+      { status: 200 }
+    );
   }
 
   try {
-    // List ONLY completed sessions (not all sessions)
-    // Paginate to ensure we get all completed ones
-    const allCompleted: Stripe.Checkout.Session[] = [];
-    let hasMore = true;
-    let startingAfter: string | undefined;
+    // List only completed sessions, no expand (fast)
+    const sessions = await stripe.checkout.sessions.list({
+      limit: 100,
+      status: "complete",
+    });
 
-    while (hasMore) {
-      const params: Stripe.Checkout.SessionListParams = {
-        limit: 100,
-        status: "complete",
-        expand: ["data.line_items"],
-      };
-      if (startingAfter) params.starting_after = startingAfter;
-
-      const batch = await stripe.checkout.sessions.list(params);
-      allCompleted.push(...batch.data);
-      hasMore = batch.has_more;
-      if (batch.data.length > 0) {
-        startingAfter = batch.data[batch.data.length - 1].id;
-      }
-    }
-
-    const purchases = allCompleted
+    const purchases = sessions.data
       .filter((s) => {
         const detailEmail = s.customer_details?.email?.toLowerCase();
         const custEmail = s.customer_email?.toLowerCase();
         return detailEmail === user.email || custEmail === user.email;
       })
       .map((s) => {
-        const product = resolveProduct(s);
+        const product = resolveProductByAmount(s.amount_total || 0);
         const dlToken = generateDownloadToken(product.slug);
         return {
           id: s.id,
@@ -116,6 +83,11 @@ export async function GET(req: NextRequest) {
     });
   } catch (err) {
     console.error("Purchases API error:", err);
-    return NextResponse.json({ error: "Failed to fetch purchases" }, { status: 500 });
+    // Return empty purchases instead of 500, so dashboard still shows
+    return NextResponse.json({
+      email: user.email,
+      purchases: [],
+      debug: String(err).substring(0, 200),
+    });
   }
 }
