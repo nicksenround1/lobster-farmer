@@ -47,12 +47,17 @@ function resolveProduct(session: Stripe.Checkout.Session) {
 }
 
 export async function GET(req: NextRequest) {
-  const sessionCookie = req.cookies.get("session")?.value;
-  if (!sessionCookie) {
+  // Accept token from Authorization header or cookie
+  const authHeader = req.headers.get("authorization");
+  const token = authHeader?.startsWith("Bearer ")
+    ? authHeader.slice(7)
+    : req.cookies.get("session")?.value;
+
+  if (!token) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const user = await verifySessionToken(sessionCookie);
+  const user = await verifySessionToken(token);
   if (!user) {
     return NextResponse.json({ error: "Invalid session" }, { status: 401 });
   }

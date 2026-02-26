@@ -10,9 +10,10 @@ export default function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    fetch("/api/auth/me")
-      .then((r) => { if (r.ok) setIsLoggedIn(true); })
-      .catch(() => {});
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("lobster_session");
+      if (token) setIsLoggedIn(true);
+    }
   }, []);
 
   const navItems = [

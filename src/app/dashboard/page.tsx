@@ -23,6 +23,25 @@ interface DashboardData {
 
 type Tab = "purchases" | "settings";
 
+function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("lobster_session");
+}
+
+function setToken(token: string) {
+  localStorage.setItem("lobster_session", token);
+}
+
+function clearToken() {
+  localStorage.removeItem("lobster_session");
+}
+
+function authHeaders(): HeadersInit {
+  const token = getToken();
+  if (!token) return {};
+  return { Authorization: `Bearer ${token}` };
+}
+
 function DashboardContent() {
   const { locale } = useLocale();
   const router = useRouter();
@@ -32,9 +51,30 @@ function DashboardContent() {
   const [copied, setCopied] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
+    // Check URL hash for token (from magic link redirect)
+    if (typeof window !== "undefined" && window.location.hash) {
+      const hash = window.location.hash.slice(1);
+      const params = new URLSearchParams(hash);
+      const hashToken = params.get("token");
+      if (hashToken) {
+        setToken(hashToken);
+        // Clean up URL
+        window.history.replaceState(null, "", window.location.pathname);
+      }
+    }
+
+    const token = getToken();
+    if (!token) {
+      router.push("/login");
+      return;
+    }
+
     try {
-      const res = await fetch("/api/auth/purchases");
+      const res = await fetch("/api/auth/purchases", {
+        headers: authHeaders(),
+      });
       if (res.status === 401) {
+        clearToken();
         router.push("/login");
         return;
       }
@@ -53,8 +93,9 @@ function DashboardContent() {
     fetchData();
   }, [fetchData]);
 
-  const handleLogout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
+  const handleLogout = () => {
+    clearToken();
+    fetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
   };
 
@@ -113,7 +154,7 @@ function DashboardContent() {
                 {locale === "zh" ? "账户面板" : "Account Dashboard"}
               </p>
               <h1 className="text-xl font-bold text-white">
-                {locale === "zh" ? `欢迎回来` : `Welcome back`}
+                {locale === "zh" ? "欢迎回来" : "Welcome back"}
               </h1>
               <p className="text-white/40 text-sm">{data.email}</p>
             </div>
@@ -168,7 +209,6 @@ function DashboardContent() {
                   </p>
                 </div>
 
-                {/* Install hint */}
                 <div className="glass-card rounded-xl p-4 mb-6 border-l-2 border-cyan-500/50">
                   <p className="text-white/50 text-sm">
                     {locale === "zh"
@@ -193,15 +233,10 @@ function DashboardContent() {
                 ) : (
                   <div className="space-y-4">
                     {data.purchases.map((purchase) => (
-                      <div
-                        key={purchase.id}
-                        className="glass-card rounded-2xl p-6"
-                      >
+                      <div key={purchase.id} className="glass-card rounded-2xl p-6">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
                           <div>
-                            <h3 className="text-lg font-bold text-white">
-                              {purchase.product}
-                            </h3>
+                            <h3 className="text-lg font-bold text-white">{purchase.product}</h3>
                             <p className="text-white/40 text-sm">
                               {locale === "zh" ? "购买于" : "Purchased"}{" "}
                               {new Date(purchase.date).toLocaleDateString(
@@ -211,24 +246,19 @@ function DashboardContent() {
                               · ${purchase.amount} {purchase.currency}
                             </p>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <a
-                              href={purchase.downloadUrl}
-                              download
-                              className="cta-button px-5 py-2 rounded-full text-sm font-medium inline-flex items-center gap-1.5"
-                            >
-                              📦 Download
-                            </a>
-                          </div>
+                          <a
+                            href={purchase.downloadUrl}
+                            download
+                            className="cta-button px-5 py-2 rounded-full text-sm font-medium inline-flex items-center gap-1.5"
+                          >
+                            📦 Download
+                          </a>
                         </div>
 
-                        {/* Install command */}
                         <div className="bg-black/50 rounded-xl p-3 border border-white/10 flex items-center justify-between gap-3">
                           <div className="flex-1 min-w-0">
                             <p className="text-white/30 text-xs mb-1">
-                              {locale === "zh"
-                                ? "安装到 OpenClaw："
-                                : "Install to OpenClaw:"}
+                              {locale === "zh" ? "安装到 OpenClaw：" : "Install to OpenClaw:"}
                             </p>
                             <code className="text-green-400 text-sm block truncate">
                               {purchase.installCmd}
@@ -255,30 +285,16 @@ function DashboardContent() {
                     {locale === "zh" ? "设置" : "Settings"}
                   </h2>
                 </div>
-
                 <div className="glass-card rounded-2xl p-6 space-y-4">
                   <div>
-                    <label className="text-white/40 text-sm">
-                      {locale === "zh" ? "邮箱" : "Email"}
-                    </label>
+                    <label className="text-white/40 text-sm">{locale === "zh" ? "邮箱" : "Email"}</label>
                     <p className="text-white">{data.email}</p>
                   </div>
                   <div className="border-t border-white/10 pt-4">
-                    <label className="text-white/40 text-sm">
-                      {locale === "zh" ? "需要帮助？" : "Need help?"}
-                    </label>
+                    <label className="text-white/40 text-sm">{locale === "zh" ? "需要帮助？" : "Need help?"}</label>
                     <p className="text-white/60 text-sm mt-1">
-                      {locale === "zh"
-                        ? "联系 support@lobsterfarmer.com 或加入"
-                        : "Contact support@lobsterfarmer.com or join"}{" "}
-                      <a
-                        href="https://t.me/+2p-LBUUrJ1BjMjNl"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[#E74C3C] hover:underline"
-                      >
-                        Telegram
-                      </a>
+                      {locale === "zh" ? "联系 support@lobsterfarmer.com 或加入" : "Contact support@lobsterfarmer.com or join"}{" "}
+                      <a href="https://t.me/+2p-LBUUrJ1BjMjNl" target="_blank" rel="noopener noreferrer" className="text-[#E74C3C] hover:underline">Telegram</a>
                     </p>
                   </div>
                 </div>
