@@ -244,12 +244,12 @@ export const products: Product[] = [
     stripeLink: "https://buy.stripe.com/5kQbJ2aie33w28w8O62VG01",
     name: { zh: "养虾户 Persona", en: "Lobster Farmer Persona" },
     desc: {
-      zh: "经过数月真实生产环境验证的 Crypto AI Agent 人格。不是通用 Prompt——是一个完整的操作系统。",
-      en: "A Crypto AI Agent persona battle-tested over months of real production use. Not a generic prompt — a complete operating system.",
+      zh: "就是推里那只龙虾在用的完整系统——不是通用模板，是真实跑了半年、每天在用的 Crypto AI Agent 操作系统。拆解 Felix Craft 等顶级 Agent 后，结合 6 个月实战经验打磨而成。",
+      en: "The exact system powering the lobster you see on Twitter — not a generic template, but a complete Crypto AI Agent OS battle-tested daily for 6+ months. Built by deconstructing top agents like Felix Craft, refined through real-world experience.",
     },
     oneLiner: {
-      zh: "经过数月实战验证的 Crypto AI Agent 人格",
-      en: "Battle-Tested Crypto AI Agent Persona",
+      zh: "推里那只龙虾的完整系统，直接复制",
+      en: "The Lobster's Exact System — Just Copy & Go",
     },
     features: {
       zh: [
@@ -303,16 +303,16 @@ export const products: Product[] = [
     },
     about: {
       zh: [
-        "养虾户 Persona 是一个经过数月真实生产环境验证的 Crypto AI Agent 人格。它不是一个通用的 ChatGPT 提示词——它是一个完整的操作系统，知道如何监控市场、追踪 Alpha、管理风险、保护你的资产安全。",
-        "这个 Persona 诞生于真实的 Crypto 投机场景：每天追踪 35+ KOL 的动态、监控 Whale 地址异动、在 Meme 币涨跌中做出快速决策。它经历了牛市狂热和恐慌抛售，从数百次真实交互中学会了什么该做、什么绝对不能做。",
-        "和你在网上能找到的「Crypto AI Prompt」不同，养虾户 Persona 不是把 Crypto 关键词塞进一个通用模板。它理解 DeFi 协议的运作逻辑、Meme 币的情绪周期、KOL 的影响力梯度、链上数据的信号与噪音。",
+        "是的，这就是推上那只龙虾在用的完整配置。不是「灵感来自」，不是「参考了」——是同一套系统的直接导出。你买到的就是我每天在跑的东西。",
+        "和 $1 Starter Pack 的核心区别：Starter Pack 给你空白模板（SOUL.md 要你自己填），Persona 给你一个已经写好、调好、跑了半年的完整人格。Starter Pack 的 Alpha Matrix 是概念演示，Persona 的是真正在用的 Pro 版——35+ KOL 实时监控、自动生成情报报告。Starter Pack 没有安全手册，Persona 有完整的 ShadowOps Manual（防注入、私钥保护、高危操作确认）。",
+        "这个 Persona 诞生于真实的 Crypto 投机场景，拆解了 Felix Craft 等顶级 Agent 的架构，再结合 6 个月每天使用的实战经验打磨而成。它经历了牛市狂热和恐慌抛售，从数百次真实交互中学会了什么该做、什么绝对不能做。",
         "安全是内建的，不是附加的。ShadowOps Manual 定义了完整的 OpSec 准则——从防注入过滤到高危操作确认机制，从私钥保护到社交工程防御。你的 Agent 知道什么是危险的操作，会在执行前要求你确认。",
       ],
       en: [
-        "Lobster Farmer Persona is a Crypto AI Agent persona battle-tested over months of real production use. It's not a generic ChatGPT prompt — it's a complete operating system that knows how to monitor markets, track alpha, manage risk, and protect your assets.",
-        "This Persona was born from real crypto speculation: daily tracking of 35+ KOLs, monitoring whale address movements, making rapid decisions amid meme coin volatility. It has lived through bull market euphoria and panic dumps, learning from hundreds of real interactions what to do — and what to absolutely never do.",
-        "Unlike the \"Crypto AI Prompts\" you can find online, Lobster Farmer Persona doesn't just stuff crypto keywords into a generic template. It understands DeFi protocol mechanics, meme coin sentiment cycles, KOL influence gradients, and the signal vs. noise in on-chain data.",
-        "Security is built-in, not bolted on. The ShadowOps Manual defines complete OpSec guidelines — from prompt injection filtering to high-risk operation confirmation, from private key protection to social engineering defense. Your Agent knows what's dangerous and will ask for confirmation before executing.",
+        "Yes, this is the exact config the lobster on Twitter uses. Not \"inspired by\" or \"based on\" — it's a direct export of the same system. What you get is what runs daily.",
+        "Core difference from $1 Starter Pack: Starter gives you blank templates (you fill in SOUL.md yourself). Persona gives you a complete personality already written, tuned, and battle-tested for 6+ months. Starter's Alpha Matrix is a concept demo; Persona's is the real Pro version — 35+ KOLs, real-time monitoring, auto-generated intel reports. Starter has no security manual; Persona includes the full ShadowOps Manual (anti-injection, key protection, high-risk confirmation).",
+        "This Persona was born from real crypto speculation, built by deconstructing top agents like Felix Craft, then refined through 6 months of daily use. It has lived through bull euphoria and panic dumps, learning from hundreds of real interactions what works — and what absolutely doesn't.",
+        "Security is built-in, not bolted on. The ShadowOps Manual defines complete OpSec guidelines — from prompt injection filtering to high-risk operation confirmation, from private key protection to social engineering defense. Your Agent knows what's dangerous and will ask before executing.",
       ],
     },
     highlights: {

@@ -5,8 +5,54 @@ import { useLocale } from "@/context/LocaleContext";
 import { products } from "@/data/products";
 import StockCounter from "@/components/StockCounter";
 
+const comparisonData = {
+  zh: {
+    title: "不知道买哪个？一张表看清区别",
+    subtitle: "Starter Pack 是模板，Persona 是真实跑了半年的完整系统",
+    headers: ["", "🎣 Starter Pack ($1)", "🦞 Persona ($49)", "📦 Bundle ($59)"],
+    rows: [
+      ["SOUL.md 人格", "通用模板（你自己填）", "✅ 真实 Crypto 投机者人格\n（就是推里这只龙虾在用的）", "✅ 同 Persona"],
+      ["AGENTS.md", "✅ 基础版", "✅ 完整版（分级加载 + 安全过滤器 + 群聊行为）", "✅ 同 Persona"],
+      ["ShadowOps Manual\n（安全手册）", "❌", "✅ 防注入 / 私钥保护 / 高危确认", "✅ 同 Persona"],
+      ["memoryFlush 配置", "✅ 配置片段", "✅ 已集成到完整系统", "✅ 同 Persona"],
+      ["Alpha Matrix", "基础版（概念演示）", "✅ Pro 版（35+ KOL 实时监控）", "✅ 同 Persona"],
+      ["Twitter Skill", "❌", "✅ 病毒式内容创作 + 自动发帖", "✅ 同 Persona"],
+      ["Security Scan", "❌", "✅ 每周自动安全审计", "✅ 同 Persona"],
+      ["ReadX 集成", "❌", "✅ 直接读取任意推文", "✅ 同 Persona"],
+      ["DX Terminal 指南", "✅ 入门版", "✅ 完整参与指南", "✅ 同 Persona"],
+      ["Cron Jobs", "✅ 8 个模板", "✅ 预配置（心跳/Alpha/安全扫描）", "✅ 同 Persona"],
+      ["40 页实战指南 PDF", "❌", "❌", "✅ 从零到一完整教程"],
+      ["VIP 技术支持", "❌ 普通社群", "✅ VIP 群", "✅ VIP 群"],
+      ["适合谁", "刚装好 OpenClaw 的新手", "想要完整 Crypto Agent 的玩家", "零基础 + 想要全套方案"],
+    ],
+    footer: "💡 简单说：Starter Pack 给你模板和工具让你自己搭。Persona 是我们已经搭好、跑了半年、每天在用的完整系统——直接复制就能用。",
+  },
+  en: {
+    title: "Not sure which one? See the difference at a glance",
+    subtitle: "Starter Pack = templates. Persona = a real system that's been running for 6+ months.",
+    headers: ["", "🎣 Starter ($1)", "🦞 Persona ($49)", "📦 Bundle ($59)"],
+    rows: [
+      ["SOUL.md Persona", "Generic template (fill in yourself)", "✅ Real Crypto speculator persona\n(the actual lobster from Twitter)", "✅ Same as Persona"],
+      ["AGENTS.md", "✅ Basic", "✅ Full (tiered loading + security filters + group behavior)", "✅ Same as Persona"],
+      ["ShadowOps Manual\n(Security)", "❌", "✅ Anti-injection / key protection / high-risk confirmation", "✅ Same as Persona"],
+      ["memoryFlush Config", "✅ Config snippet", "✅ Integrated into complete system", "✅ Same as Persona"],
+      ["Alpha Matrix", "Basic (concept demo)", "✅ Pro (35+ KOL real-time monitoring)", "✅ Same as Persona"],
+      ["Twitter Skill", "❌", "✅ Viral content creation + auto-posting", "✅ Same as Persona"],
+      ["Security Scan", "❌", "✅ Weekly auto security audit", "✅ Same as Persona"],
+      ["ReadX Integration", "❌", "✅ Read any tweet directly", "✅ Same as Persona"],
+      ["DX Terminal Guide", "✅ Intro", "✅ Full participation guide", "✅ Same as Persona"],
+      ["Cron Jobs", "✅ 8 templates", "✅ Pre-configured (heartbeat/Alpha/security)", "✅ Same as Persona"],
+      ["40-page Guide PDF", "❌", "❌", "✅ Zero-to-one complete tutorial"],
+      ["VIP Support", "❌ Community", "✅ VIP group", "✅ VIP group"],
+      ["Best for", "Just installed OpenClaw", "Want a complete Crypto Agent", "Zero-base + full solution"],
+    ],
+    footer: "💡 TL;DR: Starter Pack gives you templates to build your own. Persona is a complete system we've built, run for 6+ months, and use daily — just copy and go.",
+  },
+};
+
 export default function ProductsPage() {
   const { locale, t } = useLocale();
+  const comp = comparisonData[locale];
 
   return (
     <main className="min-h-screen bg-black relative pt-28 pb-20 px-4">
@@ -133,6 +179,65 @@ export default function ProductsPage() {
               </Link>
             );
           })}
+        </div>
+
+        {/* ── Comparison Table ── */}
+        <div className="mt-20 animate-fade-in" style={{ animationDelay: "600ms" }}>
+          <div className="text-center mb-10">
+            <h2 className="text-2xl lg:text-3xl font-bold text-white mb-3">
+              {comp.title}
+            </h2>
+            <p className="text-white/40 text-sm lg:text-base max-w-xl mx-auto">
+              {comp.subtitle}
+            </p>
+          </div>
+
+          <div className="glass-card rounded-3xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/10">
+                    {comp.headers.map((h, i) => (
+                      <th
+                        key={i}
+                        className={`px-4 py-4 text-left font-bold ${
+                          i === 0
+                            ? "text-white/50 w-[180px] min-w-[140px]"
+                            : "text-white min-w-[160px]"
+                        } ${i === 2 ? "bg-[#E74C3C]/5" : ""}`}
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {comp.rows.map((row, ri) => (
+                    <tr
+                      key={ri}
+                      className="border-b border-white/5 hover:bg-white/[0.02] transition-colors"
+                    >
+                      {row.map((cell, ci) => (
+                        <td
+                          key={ci}
+                          className={`px-4 py-3 ${
+                            ci === 0
+                              ? "text-white/60 font-medium"
+                              : "text-white/40"
+                          } ${ci === 2 ? "bg-[#E74C3C]/5 text-white/60" : ""} whitespace-pre-line`}
+                        >
+                          {cell}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="px-6 py-5 border-t border-white/10 text-white/40 text-sm leading-relaxed">
+              {comp.footer}
+            </div>
+          </div>
         </div>
       </div>
     </main>
