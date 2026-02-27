@@ -260,7 +260,7 @@ export const products: Product[] = [
         "🎁 Daily Briefing — 天气 + 日历 + Crypto 价格",
         "🎁 Twitter Skill — 内容创作 + 自动发帖",
         "🎁 Security Scan — 系统安全审计",
-        "🎁 ReadX 集成说明",
+        "🎁 6551 OpenTwitter 集成说明",
         "🎁 DX Terminal PRO 参与指南（🆕 Agentic Trading）",
         "预配置 Cron Jobs（心跳/Alpha 报告/安全扫描）",
         "完整 README + 安装指南",
@@ -274,7 +274,7 @@ export const products: Product[] = [
         "🎁 Daily Briefing — Weather + Calendar + Crypto prices",
         "🎁 Twitter Skill — Content creation + Auto posting",
         "🎁 Security Scan — System security audit",
-        "🎁 ReadX integration guide",
+        "🎁 6551 OpenTwitter integration guide",
         "🎁 DX Terminal PRO participation guide (🆕 Agentic Trading)",
         "Pre-configured Cron Jobs (heartbeat / Alpha report / security scan)",
         "Complete README + Installation guide",
@@ -363,10 +363,10 @@ export const products: Product[] = [
         },
       },
       {
-        name: "ReadX",
+        name: "6551 OpenTwitter",
         desc: {
-          zh: "Twitter/X 内容抓取集成，让你的 Agent 能直接读取任意推文和 Timeline 内容。",
-          en: "Twitter/X content scraping integration — lets your Agent directly read any tweet and Timeline content.",
+          zh: "6551 OpenTwitter 集成，让你的 Agent 能直接读取任意 KOL 推文和 Timeline 内容。",
+          en: "6551 OpenTwitter integration — lets your Agent directly read any KOL tweets and Timeline content.",
         },
       },
       {
@@ -418,8 +418,8 @@ export const products: Product[] = [
         version: "3.1.0",
         date: "2025-02-18",
         desc: {
-          zh: "新增 ReadX 集成，优化 Alpha Matrix Pro 情报格式",
-          en: "Added ReadX integration, optimized Alpha Matrix Pro intel format",
+          zh: "新增 6551 OpenTwitter 集成，优化 Alpha Matrix Pro 情报格式",
+          en: "Added 6551 OpenTwitter integration, optimized Alpha Matrix Pro intel format",
         },
       },
       {
@@ -581,10 +581,10 @@ export const products: Product[] = [
         },
       },
       {
-        name: "ReadX",
+        name: "6551 OpenTwitter",
         desc: {
-          zh: "Twitter/X 内容抓取集成（Persona 内含）",
-          en: "Twitter/X content scraping integration (included in Persona)",
+          zh: "6551 OpenTwitter 集成（Persona 内含）",
+          en: "6551 OpenTwitter integration (included in Persona)",
         },
       },
     ],

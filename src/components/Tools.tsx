@@ -8,7 +8,7 @@ const tools = [
   { name: "Claude", desc: "Anthropic AI", emoji: "🧠" },
   { name: "GPT-4", desc: "OpenAI", emoji: "⚡" },
   { name: "Seedance", desc: "Video Generation", emoji: "🎬" },
-  { name: "ReadX", desc: "Content Pipeline", emoji: "📰" },
+  { name: "6551 OpenTwitter", desc: "KOL Intelligence", emoji: "🐦" },
   { name: "Telegram", desc: "Bot Interface", emoji: "💬" },
   { name: "Next.js", desc: "Web Framework", emoji: "▲" },
 ];
