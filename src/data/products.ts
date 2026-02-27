@@ -264,7 +264,7 @@ export const products: Product[] = [
         "🎁 DX Terminal PRO 参与指南（🆕 Agentic Trading）",
         "预配置 Cron Jobs（心跳/Alpha 报告/安全扫描）",
         "完整 README + 安装指南",
-        "TG VIP 技术社群",
+        "1 对 1 售后",
       ],
       en: [
         "Complete SOUL.md — Crypto speculator persona refined over months",
@@ -278,7 +278,7 @@ export const products: Product[] = [
         "🎁 DX Terminal PRO participation guide (🆕 Agentic Trading)",
         "Pre-configured Cron Jobs (heartbeat / Alpha report / security scan)",
         "Complete README + Installation guide",
-        "TG VIP community",
+        "1-on-1 after-sales",
       ],
     },
     includes: {
@@ -289,7 +289,7 @@ export const products: Product[] = [
         "6 个 Skills（全部附赠，含 DX Terminal 🆕）",
         "预配置 Cron Jobs",
         "README + 安装指南",
-        "TG VIP 群入口",
+        "1 对 1 售后支持",
       ],
       en: [
         "Complete SOUL.md persona file",
@@ -298,7 +298,7 @@ export const products: Product[] = [
         "6 Skills (all included free, incl. DX Terminal 🆕)",
         "Pre-configured Cron Jobs",
         "README + Installation guide",
-        "TG VIP group access",
+        "1-on-1 after-sales support",
       ],
     },
     about: {
@@ -322,7 +322,7 @@ export const products: Product[] = [
         { title: "安全优先架构", desc: "内建 OpSec 准则、防注入过滤、高危操作确认机制、社交工程防御" },
         { title: "自动化心跳", desc: "30 分钟心跳检测，自动发现崩溃进程并重启，7×24 不间断" },
         { title: "情报自动化", desc: "每日自动生成 Alpha 情报报告，追踪 35+ KOL 动态和 Whale 异动" },
-        { title: "VIP 技术支持", desc: "购买即获 Telegram VIP 群入口，与其他买家交流配置心得" },
+        { title: "VIP 技术支持", desc: "购买即获 Telegram VIP 群入口，购买后可直接联系获得配置协助" },
       ],
       en: [
         { title: "Crypto-native Persona", desc: "Understands DeFi, meme coins, on-chain data, KOL ecosystem — not generic AI with crypto keywords" },
@@ -330,7 +330,7 @@ export const products: Product[] = [
         { title: "Security-first Architecture", desc: "Built-in OpSec guidelines, injection filtering, high-risk confirmation, social engineering defense" },
         { title: "Automated Heartbeat", desc: "30-min heartbeat detection, auto-discovers crashed processes and restarts, 24/7 uptime" },
         { title: "Intel Automation", desc: "Daily auto-generated Alpha intelligence reports, tracking 35+ KOLs and whale movements" },
-        { title: "VIP Tech Support", desc: "Purchase includes Telegram VIP group access — share tips and get help from the community" },
+        { title: "VIP Tech Support", desc: "Purchase includes Telegram VIP group access — direct after-sales assistance for setup" },
       ],
     },
     skillsIncluded: [
@@ -486,7 +486,7 @@ export const products: Product[] = [
         "Crypto 自动化策略详解",
         "安全加固指南",
         "常见问题 FAQ 合集",
-        "TG VIP 技术社群",
+        "1 对 1 售后",
       ],
       en: [
         "🦞 Complete Lobster Farmer Persona (everything above)",
@@ -496,7 +496,7 @@ export const products: Product[] = [
         "Crypto automation strategy deep-dive",
         "Security hardening guide",
         "FAQ collection",
-        "TG VIP community",
+        "1-on-1 after-sales",
       ],
     },
     includes: {
@@ -506,7 +506,7 @@ export const products: Product[] = [
         "5 个 Skills（全部附赠）",
         "预配置 Cron Jobs",
         "ShadowOps Manual",
-        "TG VIP 群入口",
+        "1 对 1 售后支持",
       ],
       en: [
         "Complete Lobster Farmer Persona pack",
@@ -514,7 +514,7 @@ export const products: Product[] = [
         "5 Skills (all included free)",
         "Pre-configured Cron Jobs",
         "ShadowOps Manual",
-        "TG VIP group access",
+        "1-on-1 after-sales support",
       ],
     },
     about: {
@@ -540,7 +540,7 @@ export const products: Product[] = [
         { title: "40+ 页实战手册", desc: "不是链接合集，是踩过所有坑后写的指南" },
         { title: "零基础友好", desc: "从安装 OpenClaw 开始，手把手带你走完全程" },
         { title: "包含完整 Persona", desc: "养虾户 Persona 的所有内容——Skills、Cron、安全手册，一个不少" },
-        { title: "VIP 技术支持", desc: "配置过程中遇到问题，VIP 群内和其他用户交流讨论" },
+        { title: "VIP 技术支持", desc: "配置过程中遇到问题，可直接联系获得售后协助" },
       ],
       en: [
         { title: "Persona + Guide", desc: "Capability and knowledge, all in one" },
@@ -548,7 +548,7 @@ export const products: Product[] = [
         { title: "40+ Page Field Manual", desc: "Not a link collection — a guide written after stepping on every landmine" },
         { title: "Zero-to-Hero Friendly", desc: "Starting from OpenClaw installation, walk you through everything" },
         { title: "Complete Persona Included", desc: "Everything in the Persona pack — Skills, Crons, security manual, nothing left out" },
-        { title: "VIP Tech Support", desc: "Any setup issues? Discuss with others in the VIP community group" },
+        { title: "VIP Tech Support", desc: "Any setup issues? Discuss with others in the 1-on-1 after-sales support" },
       ],
     },
     skillsIncluded: [
