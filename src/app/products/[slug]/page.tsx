@@ -1,16 +1,25 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useLocale } from "@/context/LocaleContext";
 import { products, getProductBySlug } from "@/data/products";
 import StockCounter from "@/components/StockCounter";
 import { useParams } from "next/navigation";
+import { appendRefToLink } from "@/lib/referral";
 
 export default function ProductDetailPage() {
   const { locale, t } = useLocale();
   const params = useParams();
   const slug = params.slug as string;
   const product = getProductBySlug(slug);
+  const [buyLink, setBuyLink] = useState("");
+
+  useEffect(() => {
+    if (product) {
+      setBuyLink(appendRefToLink(product.stripeLink));
+    }
+  }, [product]);
 
   if (!product) {
     return (
@@ -350,7 +359,7 @@ export default function ProductDetailPage() {
                 )}
 
                 <a
-                  href={product.stripeLink}
+                  href={buyLink || product.stripeLink}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="cta-button w-full px-6 py-3.5 rounded-full text-base font-bold block text-center"
@@ -401,7 +410,7 @@ export default function ProductDetailPage() {
             </span>
           </div>
           <a
-            href={product.stripeLink}
+            href={buyLink || product.stripeLink}
             target="_blank"
             rel="noopener noreferrer"
             className="cta-button px-8 py-3 rounded-full text-sm font-bold shrink-0"

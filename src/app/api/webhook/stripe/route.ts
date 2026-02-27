@@ -2,8 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { Resend } from "resend";
 import crypto from "crypto";
+import fs from "fs";
+import path from "path";
 
 const DOWNLOAD_SECRET = process.env.DOWNLOAD_SECRET || "lobster-dl-secret-2026";
+const COMMISSIONS_FILE = "/tmp/lobster-commissions.json";
+const REFERRERS_FILE = "/tmp/lobster-referrers.json";
+const COMMISSION_RATE = 0.25; // 25%
 
 function getStripe() {
   const key = process.env.STRIPE_SECRET_KEY;
@@ -39,6 +44,125 @@ function resolveProductByAmount(cents: number): { name: string; slug: string } {
   if (cents <= 150) return { name: "Starter Pack", slug: "starter-pack" };
   if (cents <= 5500) return { name: "Lobster Persona", slug: "lobster-persona" };
   return { name: "Lobster Bundle", slug: "lobster-bundle" };
+}
+
+interface Referrer {
+  code: string;
+  email: string;
+  wallet: string;
+  createdAt: string;
+}
+
+interface Commission {
+  sessionId: string;
+  refCode: string;
+  referrerEmail: string;
+  buyerEmail: string;
+  amount: number;
+  commission: number;
+  currency: string;
+  product: string;
+  createdAt: string;
+  settled: boolean;
+}
+
+function loadReferrers(): Referrer[] {
+  try {
+    if (fs.existsSync(REFERRERS_FILE)) {
+      return JSON.parse(fs.readFileSync(REFERRERS_FILE, "utf-8"));
+    }
+  } catch { /* ignore */ }
+  return [];
+}
+
+function loadCommissions(): Commission[] {
+  try {
+    if (fs.existsSync(COMMISSIONS_FILE)) {
+      return JSON.parse(fs.readFileSync(COMMISSIONS_FILE, "utf-8"));
+    }
+  } catch { /* ignore */ }
+  return [];
+}
+
+function saveCommissions(commissions: Commission[]): void {
+  const dir = path.dirname(COMMISSIONS_FILE);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(COMMISSIONS_FILE, JSON.stringify(commissions, null, 2));
+}
+
+async function processReferralCommission(
+  stripe: Stripe,
+  session: Stripe.Checkout.Session,
+  productName: string
+) {
+  const refId = session.client_reference_id;
+  if (!refId || !refId.startsWith("ref_")) return;
+
+  const refCode = refId.replace("ref_", "");
+  const buyerEmail =
+    session.customer_details?.email?.toLowerCase() ||
+    session.customer_email?.toLowerCase() ||
+    "";
+
+  // Find referrer
+  const referrers = loadReferrers();
+  const referrer = referrers.find((r) => r.code === refCode);
+  if (!referrer) {
+    console.log(`Referral code ${refCode} not found in referrers`);
+    return;
+  }
+
+  // Self-referral check
+  if (referrer.email.toLowerCase() === buyerEmail) {
+    console.log(`Self-referral blocked: ${buyerEmail}`);
+    return;
+  }
+
+  const amountTotal = (session.amount_total || 0) / 100;
+  const commission = Math.round(amountTotal * COMMISSION_RATE * 100) / 100;
+
+  // Save commission to local JSON
+  const commissions = loadCommissions();
+  // Check for duplicate
+  if (commissions.some((c) => c.sessionId === session.id)) {
+    console.log(`Commission for session ${session.id} already recorded`);
+    return;
+  }
+
+  const newCommission: Commission = {
+    sessionId: session.id,
+    refCode,
+    referrerEmail: referrer.email,
+    buyerEmail,
+    amount: amountTotal,
+    commission,
+    currency: (session.currency || "usd").toUpperCase(),
+    product: productName,
+    createdAt: new Date().toISOString(),
+    settled: false,
+  };
+
+  commissions.push(newCommission);
+  saveCommissions(commissions);
+
+  // Update Stripe session metadata with referral info
+  try {
+    await stripe.checkout.sessions.update(session.id, {
+      metadata: {
+        ...session.metadata,
+        referral_code: refCode,
+        referrer_email: referrer.email,
+        commission_amount: commission.toString(),
+        commission_currency: session.currency || "usd",
+      },
+    });
+  } catch (err) {
+    console.error("Failed to update Stripe session metadata:", err);
+  }
+
+  console.log(
+    `✅ Commission recorded: ${refCode} → $${commission} from ${buyerEmail} (${productName})`
+  );
 }
 
 export async function POST(req: NextRequest) {
@@ -189,6 +313,15 @@ export async function POST(req: NextRequest) {
 </html>`,
         });
         console.log(`✅ Email sent to ${customerEmail} for ${productName}`);
+      }
+
+      // Process referral commission
+      if (stripe) {
+        try {
+          await processReferralCommission(stripe, session, productName);
+        } catch (err) {
+          console.error("Referral commission processing error:", err);
+        }
       }
     }
 
