@@ -28,7 +28,7 @@ function verifyDownloadToken(product: string, token: string): boolean {
 }
 
 const productFileMap: Record<string, string> = {
-  "starter-pack": "starter-pack-v1.0.zip",
+  "starter-pack": "starter-pack-v1.3.zip",
   "lobster-persona": "lobster-persona-v1.0.zip",
   "lobster-bundle": "lobster-bundle-v1.0.zip",
 };
