@@ -2,40 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySessionToken } from "@/lib/auth";
 import Stripe from "stripe";
 import crypto from "crypto";
-import fs from "fs";
-import path from "path";
-
-const REFERRERS_FILE = "/tmp/lobster-referrers.json";
-
-interface Referrer {
-  code: string;
-  email: string;
-  wallet: string;
-  createdAt: string;
-}
 
 function getStripe() {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) return null;
   return new Stripe(key);
-}
-
-function loadReferrers(): Referrer[] {
-  try {
-    if (fs.existsSync(REFERRERS_FILE)) {
-      const data = fs.readFileSync(REFERRERS_FILE, "utf-8");
-      return JSON.parse(data);
-    }
-  } catch {
-    console.error("Failed to load referrers file");
-  }
-  return [];
-}
-
-function saveReferrers(referrers: Referrer[]): void {
-  const dir = path.dirname(REFERRERS_FILE);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(REFERRERS_FILE, JSON.stringify(referrers, null, 2));
 }
 
 function generateRefCode(): string {
@@ -54,6 +25,21 @@ function getSessionToken(req: NextRequest): string | null {
     return authHeader.slice(7);
   }
   return req.cookies.get("session")?.value || null;
+}
+
+// Find or create Stripe customer by email
+async function findOrCreateCustomer(
+  stripe: Stripe,
+  email: string
+): Promise<Stripe.Customer> {
+  const existing = await stripe.customers.list({
+    email: email.toLowerCase(),
+    limit: 1,
+  });
+  if (existing.data.length > 0) {
+    return existing.data[0];
+  }
+  return await stripe.customers.create({ email: email.toLowerCase() });
 }
 
 export async function POST(req: NextRequest) {
@@ -77,62 +63,74 @@ export async function POST(req: NextRequest) {
   }
 
   const wallet = body.wallet?.trim();
-  if (!wallet) {
-    return NextResponse.json({ error: "Wallet address is required" }, { status: 400 });
+  if (!wallet || !/^0x[a-fA-F0-9]{40}$/.test(wallet)) {
+    return NextResponse.json(
+      { error: "Valid EVM wallet address is required (0x...)" },
+      { status: 400 }
+    );
   }
 
-  // Check if already registered
-  const referrers = loadReferrers();
-  const existing = referrers.find(
-    (r) => r.email.toLowerCase() === user.email.toLowerCase()
-  );
-  if (existing) {
+  const stripe = getStripe();
+  if (!stripe) {
+    return NextResponse.json(
+      { error: "Payment system unavailable" },
+      { status: 500 }
+    );
+  }
+
+  // Find or create Stripe customer
+  const customer = await findOrCreateCustomer(stripe, user.email);
+
+  // Check if already registered (metadata has ref code)
+  if (customer.metadata?.ref_code) {
+    // Update wallet if different
+    if (customer.metadata.ref_wallet !== wallet) {
+      await stripe.customers.update(customer.id, {
+        metadata: { ...customer.metadata, ref_wallet: wallet },
+      });
+    }
     return NextResponse.json({
-      code: existing.code,
-      referralUrl: `https://lobsterfarmer.com?ref=${existing.code}`,
+      code: customer.metadata.ref_code,
+      referralUrl: `https://lobsterfarmer.com?ref=${customer.metadata.ref_code}`,
       message: "Already registered",
     });
   }
 
-  // Verify user has purchase records (query Stripe)
-  const stripe = getStripe();
-  if (stripe) {
-    try {
-      const sessions = await stripe.checkout.sessions.list({
-        limit: 10,
-        status: "complete",
-      });
-      const hasPurchase = sessions.data.some((s) => {
-        const detailEmail = s.customer_details?.email?.toLowerCase();
-        const custEmail = s.customer_email?.toLowerCase();
-        return (
-          detailEmail === user.email.toLowerCase() ||
-          custEmail === user.email.toLowerCase()
-        );
-      });
-      if (!hasPurchase) {
-        return NextResponse.json(
-          { error: "You need to purchase a product before becoming a referrer" },
-          { status: 403 }
-        );
-      }
-    } catch (err) {
-      console.error("Stripe check failed:", err);
-      // Allow registration even if Stripe check fails
+  // Verify user has purchase records
+  try {
+    const sessions = await stripe.checkout.sessions.list({
+      limit: 100,
+      status: "complete",
+    });
+    const hasPurchase = sessions.data.some((s) => {
+      const detailEmail = s.customer_details?.email?.toLowerCase();
+      const custEmail = s.customer_email?.toLowerCase();
+      return (
+        detailEmail === user.email.toLowerCase() ||
+        custEmail === user.email.toLowerCase()
+      );
+    });
+    if (!hasPurchase) {
+      return NextResponse.json(
+        {
+          error: "You need to purchase a product before becoming a referrer",
+        },
+        { status: 403 }
+      );
     }
+  } catch (err) {
+    console.error("Stripe purchase check failed:", err);
   }
 
-  // Generate referral code
+  // Generate referral code and store in Stripe customer metadata
   const code = generateRefCode();
-  const newReferrer: Referrer = {
-    code,
-    email: user.email.toLowerCase(),
-    wallet,
-    createdAt: new Date().toISOString(),
-  };
-
-  referrers.push(newReferrer);
-  saveReferrers(referrers);
+  await stripe.customers.update(customer.id, {
+    metadata: {
+      ref_code: code,
+      ref_wallet: wallet,
+      ref_created: new Date().toISOString(),
+    },
+  });
 
   return NextResponse.json({
     code,
