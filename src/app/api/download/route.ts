@@ -14,9 +14,10 @@ function getStripe() {
 }
 
 function verifyDownloadToken(product: string, token: string): boolean {
-  const hour = Math.floor(Date.now() / 3600000);
-  // Check current hour and previous hour (grace period)
-  for (const h of [hour, hour - 1]) {
+  const currentHour = Math.floor(Date.now() / 3600000);
+  // Check last 72 hours (72 * 1 hour windows)
+  for (let i = 0; i < 72; i++) {
+    const h = currentHour - i;
     const expected = crypto
       .createHmac("sha256", DOWNLOAD_SECRET)
       .update(product + h)
