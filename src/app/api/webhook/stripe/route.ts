@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { Resend } from "resend";
 import crypto from "crypto";
+import { COMMISSION_RATE } from "@/lib/config";
 
 const DOWNLOAD_SECRET = process.env.DOWNLOAD_SECRET || "lobster-dl-secret-2026";
-const COMMISSION_RATE = 0.25; // 25%
 
 function getStripe() {
   const key = process.env.STRIPE_SECRET_KEY;

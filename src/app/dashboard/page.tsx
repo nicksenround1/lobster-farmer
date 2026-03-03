@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale } from "@/context/LocaleContext";
+import { COMMISSION_RATE_DISPLAY } from "@/lib/config";
 
 interface Purchase {
   id: string;
@@ -402,8 +403,8 @@ function DashboardContent() {
                   </h2>
                   <p className="text-white/40 text-sm">
                     {locale === "zh"
-                      ? "推荐朋友购买，赚取 25% 佣金"
-                      : "Refer friends, earn 25% commission"}
+                      ? `推荐朋友购买，赚取 ${COMMISSION_RATE_DISPLAY} 佣金`
+                      : `Refer friends, earn ${COMMISSION_RATE_DISPLAY} commission`}
                   </p>
                 </div>
 
@@ -595,13 +596,13 @@ function DashboardContent() {
                       </h3>
                       <p className="text-white/50 text-sm leading-relaxed max-w-md mx-auto mb-6">
                         {locale === "zh"
-                          ? "推荐朋友购买养虾户产品，每笔订单赚取 25% 佣金。每周一 USDC 自动结算到你的钱包。"
-                          : "Refer friends to Lobster Farmer products and earn 25% commission on every order. Weekly USDC payouts to your wallet."}
+                          ? `推荐朋友购买养虾户产品，每笔订单赚取 ${COMMISSION_RATE_DISPLAY} 佣金。每周一 USDC 自动结算到你的钱包。`
+                          : `Refer friends to Lobster Farmer products and earn ${COMMISSION_RATE_DISPLAY} commission on every order. Weekly USDC payouts to your wallet.`}
                       </p>
 
                       <div className="grid grid-cols-3 gap-4 mb-8">
                         <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
-                          <p className="text-2xl font-bold text-[#E74C3C]">25%</p>
+                          <p className="text-2xl font-bold text-[#E74C3C]">{COMMISSION_RATE_DISPLAY}</p>
                           <p className="text-white/40 text-xs mt-1">
                             {locale === "zh" ? "佣金比例" : "Commission"}
                           </p>
@@ -698,8 +699,8 @@ function DashboardContent() {
                             title: locale === "zh" ? "赚钱" : "Earn",
                             desc:
                               locale === "zh"
-                                ? "每笔订单自动计算 25% 佣金，每周一 USDC 结算"
-                                : "25% commission auto-calculated per order, weekly USDC payouts",
+                                ? `每笔订单自动计算 ${COMMISSION_RATE_DISPLAY} 佣金，每周一 USDC 结算`
+                                : `${COMMISSION_RATE_DISPLAY} commission auto-calculated per order, weekly USDC payouts`,
                           },
                         ].map((item) => (
                           <div
